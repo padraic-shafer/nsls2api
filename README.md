@@ -62,8 +62,8 @@ The project uses `uv pip compile` to manage the `requirements.txt` and `requirem
 In order to upgrade the packages versions you will need to simply run
 
 ```
-uv pip compile requirements-dev.in --upgrade -o requirements-dev.txt
-uv pip compile requirements.in --upgrade -o requirements.txt
+uv pip compile requirements-dev.in --upgrade -o requirements-dev.txt --exclude-newer "1 week"
+uv pip compile requirements.in --upgrade -o requirements.txt --exclude-newer "1 week"
 ```
 
 Then in order to actually upgrade the packages 
