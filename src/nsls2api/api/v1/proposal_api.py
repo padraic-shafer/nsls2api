@@ -120,8 +120,7 @@ async def get_proposals(
         current_cycle = await facility_service.current_operating_cycle(FacilityName.nsls2)
         if not current_cycle:
             raise HTTPException(status_code=404, detail="No current operating cycle found")
-        if not cycle:
-            cycle = [current_cycle]
+        cycle = [current_cycle]
 
 
     proposal_list = await proposal_service.fetch_proposals(
@@ -144,7 +143,7 @@ async def get_proposals(
 
         for proposal in proposal_list:
             # Current cycle strict display
-            if current_cycle_only and current_cycle:
+            if current_cycle_only:
                 proposal.cycles = [current_cycle]
 
             # SAF filter
