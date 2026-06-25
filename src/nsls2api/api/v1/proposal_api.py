@@ -27,6 +27,7 @@ from nsls2api.models.slack_models import (
 from nsls2api.services import (
     proposal_service,
     slack_service,
+    facility_service
 )
 from nsls2api.services.slack_service import get_conversation_details
 
@@ -107,7 +108,22 @@ async def get_proposals(
     page_size: int = Query(10, ge=1, le=200),
     page: int = Query(1, ge=1),
     include_directories: bool = False,
+    #--- optional filters -----
+    username: str | None = Query(None, description="Filter proposals by username (must be in proposal users)"),
+    current_cycle_only: bool = Query(False, description="Restrict to current operating cycle"),
+    saf_status: list[str] = Query(default=[] , description="Filter SAFs by status e.g. approved, expired"),
+    
 ):
+    current_cycle = None
+    if current_cycle_only:
+        
+        current_cycle = await facility_service.current_operating_cycle(FacilityName.nsls2)
+        if not current_cycle:
+            raise HTTPException(status_code=404, detail="No current operating cycle found")
+        if not cycle:
+            cycle = [current_cycle]
+
+
     proposal_list = await proposal_service.fetch_proposals(
         proposal_id=proposal_id,
         beamline=beamline,
@@ -116,7 +132,35 @@ async def get_proposals(
         page_size=page_size,
         page=page,
         include_directories=include_directories,
+        username=username,
     )
+    
+    # Post-filter block runs if optional params are provided
+    if username or current_cycle_only or saf_status:
+    
+        allowed_statuses = {s.strip().lower() for s in saf_status}
+        allowed_instruments = {i.upper() for i in beamline}
+        filtered = []
+
+        for proposal in proposal_list:
+            # Current cycle strict display
+            if current_cycle_only and current_cycle:
+                proposal.cycles = [current_cycle]
+
+            # SAF filter
+            if allowed_statuses or allowed_instruments:
+                proposal.safs = [
+                    s for s in (proposal.safs or [])
+                    if s.saf_id
+                    and (not allowed_statuses or (s.status or "").strip().lower() in allowed_statuses)
+                    and (not allowed_instruments or any(
+                        i.upper() in allowed_instruments for i in (s.instruments or [])
+                    ))
+                ]
+
+            filtered.append(proposal)
+        
+        proposal_list = filtered
 
     response_model = {
         "proposals": proposal_list,
