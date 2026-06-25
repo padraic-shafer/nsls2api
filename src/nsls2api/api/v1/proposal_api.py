@@ -135,18 +135,17 @@ async def get_proposals(
     )
     
     # Post-filter block runs if optional params are provided
-    if username or current_cycle_only or saf_status:
+    if username or current_cycle_only or saf_status or beamline:
     
         allowed_statuses = {s.strip().lower() for s in saf_status}
         allowed_instruments = {i.upper() for i in beamline}
         filtered = []
 
         for proposal in proposal_list:
-            # Current cycle strict display
-            if current_cycle_only:
+    
+            if current_cycle_only and current_cycle and proposal.cycles:
                 proposal.cycles = [current_cycle]
 
-            # SAF filter
             if allowed_statuses or allowed_instruments:
                 proposal.safs = [
                     s for s in (proposal.safs or [])
@@ -156,6 +155,8 @@ async def get_proposals(
                         i.upper() in allowed_instruments for i in (s.instruments or [])
                     ))
                 ]
+                if (allowed_statuses or allowed_instruments) and not proposal.safs:
+                    continue
 
             filtered.append(proposal)
         
