@@ -190,3 +190,56 @@ async def test_data_sessions_invalid_beamline(admin_api_key):
     body = resp.json()
     assert body["count"] == 0
     assert body["proposals"] == []
+
+@pytest.mark.anyio
+async def test_fetch_proposals_by_username_exists():
+    """Test filtering proposals by username that exists in test data"""
+    proposal = await proposal_service.proposal_by_id(test_proposal_id)
+    if proposal.users and len(proposal.users) > 0:
+        test_username = proposal.users[0].username
+        
+        results = await proposal_service.fetch_proposals(username=test_username)
+        
+        assert len(results) > 0
+
+        for p in results:
+            usernames = [u.username for u in p.users]
+            assert test_username in usernames
+
+
+@pytest.mark.anyio
+async def test_fetch_proposals_by_username_not_exists():
+    """Test filtering by username that doesn't exist"""
+    results = await proposal_service.fetch_proposals(username="nonexistent_user_xyz")
+    
+    assert len(results) == 0
+
+
+@pytest.mark.anyio
+async def test_fetch_proposals_username_whitespace():
+    """Test username filtering with whitespace edge cases"""
+    results_whitespace = await proposal_service.fetch_proposals(username="   ")
+    
+    results_no_filter = await proposal_service.fetch_proposals()
+    
+    assert len(results_whitespace) == len(results_no_filter)
+
+
+@pytest.mark.anyio
+async def test_fetch_proposals_username_with_pagination():
+    """Test username filter works correctly with pagination"""
+    proposal = await proposal_service.proposal_by_id(test_proposal_id)
+    if proposal.users and len(proposal.users) > 0:
+        test_username = proposal.users[0].username
+        
+        page_1 = await proposal_service.fetch_proposals(
+            username=test_username,
+            page_size=5,
+            page=1
+        )
+
+        assert len(page_1) > 0
+
+        for p in page_1:
+            usernames = [u.username for u in p.users]
+            assert test_username in usernames
