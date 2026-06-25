@@ -348,6 +348,7 @@ async def fetch_proposals(
     page_size: int = 10,
     page: int = 1,
     include_directories: bool = False,
+    username: str | None = None,
 ) -> Optional[list[ProposalFullDetails]]:
     query = []
 
@@ -360,6 +361,9 @@ async def fetch_proposals(
 
     if proposal_id:
         query.append(In(Proposal.proposal_id, proposal_id))
+
+    if username:
+        query.append(ElemMatch(Proposal.users, {"username": username.strip()}))
 
     if len(query) == 0:
         proposals = (
