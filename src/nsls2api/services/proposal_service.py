@@ -361,9 +361,11 @@ async def fetch_proposals(
 
     if proposal_id:
         query.append(In(Proposal.proposal_id, proposal_id))
-
+        
+    if username is not None:
+        username = username.strip()
     if username:
-        query.append(ElemMatch(Proposal.users, {"username": username.strip()}))
+        query.append(ElemMatch(Proposal.users, {"username": username}))
 
     if len(query) == 0:
         proposals = (
