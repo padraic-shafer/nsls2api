@@ -349,6 +349,7 @@ async def fetch_proposals(
     page: int = 1,
     include_directories: bool = False,
     username: str | None = None,
+    saf_status: list[str] | None = None,
 ) -> Optional[list[ProposalFullDetails]]:
     query = []
 
@@ -383,6 +384,13 @@ async def fetch_proposals(
             .skip(page_size * (page - 1))
             .to_list()
         )
+
+    if saf_status is None:
+        saf_status = []
+    allowed_statuses = {s.strip().lower() for s in saf_status if s and s.strip()}
+    if allowed_statuses:
+        query.append(ElemMatch(Proposal.safs, {"status": {"$in": list(allowed_statuses)}}))
+        
 
     # Add directories field to each proposal
     if include_directories:
