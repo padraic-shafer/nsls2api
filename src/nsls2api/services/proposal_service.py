@@ -368,6 +368,16 @@ async def fetch_proposals(
     if username:
         query.append(ElemMatch(Proposal.users, {"username": username}))
 
+    allowed_statuses = {
+        s.strip().upper()
+        for s in (saf_status or [])
+        if s and s.strip()
+    }
+    if allowed_statuses:
+        query.append(
+            ElemMatch(Proposal.safs, {"status": {"$in": list(allowed_statuses)}})
+        )
+
     if len(query) == 0:
         proposals = (
             await Proposal.find_many()
@@ -385,12 +395,23 @@ async def fetch_proposals(
             .to_list()
         )
 
-    if saf_status is None:
-        saf_status = []
-    allowed_statuses = {s.strip().lower() for s in saf_status if s and s.strip()}
-    if allowed_statuses:
-        query.append(ElemMatch(Proposal.safs, {"status": {"$in": list(allowed_statuses)}}))
-        
+    #SAF and instrument filtering
+    allowed_saf_instruments = {i.upper() for i in beamline}
+    if allowed_statuses or allowed_saf_instruments:
+        filtered_proposals = []
+        for proposal in proposals:
+            proposal.safs = [
+                saf
+                for saf in (proposal.safs or [])
+                if saf.saf_id
+                and (saf.status or "").strip().upper() in allowed_statuses
+                and (not allowed_saf_instruments or any(
+                    i.upper() in allowed_saf_instruments for i in (saf.instruments or [])
+                ))
+            ]
+            if proposal.safs:
+                filtered_proposals.append(proposal)
+        proposals = filtered_proposals
 
     # Add directories field to each proposal
     if include_directories:
