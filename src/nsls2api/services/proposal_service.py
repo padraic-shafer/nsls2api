@@ -414,7 +414,7 @@ async def fetch_proposals(
                 saf
                 for saf in (proposal.safs or [])
                 if saf.saf_id
-                and (saf.status or "").strip().upper() in allowed_statuses
+                and (not allowed_statuses or (saf.status or "").strip().upper() in allowed_statuses)
                 and (not allowed_saf_instruments or any(
                     i.upper() in allowed_saf_instruments for i in (saf.instruments or [])
                 ))
@@ -422,7 +422,7 @@ async def fetch_proposals(
             if proposal.safs:
                 filtered_proposals.append(proposal)
         proposals = filtered_proposals
-        
+
     #current cycle filtering
     if current_cycle_only and current_cycle:
         for proposal in proposals:
