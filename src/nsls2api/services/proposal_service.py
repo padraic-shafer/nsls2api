@@ -383,11 +383,32 @@ async def fetch_proposals(
         for s in (saf_status or [])
         if s and s.strip()
     }
-    if allowed_statuses:
+
+    # when SAF status filtering is requested,
+    # use beamline values for SAF instrument matching. Beamline-only requests
+    # (without SAF filters) keep proposal-level semantics unchanged.
+    allowed_saf_instruments = set()
+    if allowed_statuses and beamline:
+        allowed_saf_instruments = {
+            beamline_name.strip().upper()
+            for beamline_name in beamline
+            if beamline_name and beamline_name.strip()
+        }
+
+    if allowed_statuses and allowed_saf_instruments:
+        query.append(
+            ElemMatch(
+                Proposal.safs,
+                {
+                    "status": {"$in": list(allowed_statuses)},
+                    "instruments": {"$in": list(allowed_saf_instruments)},
+                },
+            )
+        )
+    elif allowed_statuses:
         query.append(
             ElemMatch(Proposal.safs, {"status": {"$in": list(allowed_statuses)}})
         )
-
     if len(query) == 0:
         proposals = (
             await Proposal.find_many()
@@ -405,8 +426,7 @@ async def fetch_proposals(
             .to_list()
         )
 
-    #SAF and instrument filtering
-    allowed_saf_instruments = {i.upper() for i in (beamline or [])}
+    # SAF filtering: query narrows matching proposals, this block trims nested SAFs.
     if allowed_statuses or allowed_saf_instruments:
         filtered_proposals = []
         for proposal in proposals:
@@ -419,11 +439,15 @@ async def fetch_proposals(
                     i.upper() in allowed_saf_instruments for i in (saf.instruments or [])
                 ))
             ]
-            if proposal.safs:
-                filtered_proposals.append(proposal)
+
+            if not proposal.safs:
+                continue
+
+            filtered_proposals.append(proposal)
+
         proposals = filtered_proposals
 
-    #current cycle filtering
+    # current cycle filtering
     if current_cycle_only and current_cycle:
         for proposal in proposals:
             proposal.cycles = [current_cycle]

@@ -110,7 +110,7 @@ async def get_proposals(
     include_directories: bool = False,
     #--- optional filters -----
     username: str | None = Query(None, description="Filter proposals by username (must be in proposal users)"),
-    saf_status: list[str] = Query(default=[] , description="Filter SAFs by status e.g. approved, expired"),
+    saf_status: list[str] | None = Query(default=None, description="Filter SAFs by status e.g. approved, expired"),
     current_cycle_only: bool = Query(False, description="Restrict to current operating cycle"),
 ):
 
