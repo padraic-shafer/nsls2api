@@ -350,17 +350,8 @@ async def fetch_proposals(
     include_directories: bool = False,
     username: str | None = None,
     saf_status: list[str] | None = None,
-    current_cycle_only: bool = False,
 ) -> Optional[list[ProposalFullDetails]]:
     query = []
-
-    current_cycle = None
-    if current_cycle_only:
-        facility_name = facility[0] if facility else FacilityName.nsls2
-        current_cycle = await facility_service.current_operating_cycle(facility_name)
-        if not current_cycle:
-            raise LookupError("No current operating cycle found")
-        cycle = [current_cycle]
 
     
     if beamline:
@@ -446,11 +437,6 @@ async def fetch_proposals(
             filtered_proposals.append(proposal)
 
         proposals = filtered_proposals
-
-    # current cycle filtering
-    if current_cycle_only and current_cycle:
-        for proposal in proposals:
-            proposal.cycles = [current_cycle]
 
 
     # Add directories field to each proposal
