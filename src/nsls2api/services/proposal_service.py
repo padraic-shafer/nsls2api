@@ -388,7 +388,7 @@ async def fetch_proposals(
         )
 
     # SAF filtering: query narrows matching proposals, this block trims nested SAFs.
-    if saf_status or beamline:
+    if saf_status:
         filtered_proposals = []
         for proposal in proposals:
             proposal.safs = [
@@ -396,9 +396,6 @@ async def fetch_proposals(
                 for saf in (proposal.safs or [])
                 if saf.saf_id
                 and (not saf_status or (saf.status or "").strip().upper() in {s.strip().upper() for s in saf_status})
-                and (not beamline or any(
-                    i.upper() in {b.strip().upper() for b in beamline} for i in (saf.instruments or [])
-                ))
             ]
 
             if not proposal.safs:
