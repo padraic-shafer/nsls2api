@@ -345,11 +345,12 @@ async def fetch_proposals(
     beamline: list[str] | None = None,
     cycle: list[str] | None = None,
     facility: list[str] | None = None,
+    username: str | None = None,
+    saf_status: list[str] | None = None,
     page_size: int = 10,
     page: int = 1,
     include_directories: bool = False,
-    username: str | None = None,
-    saf_status: list[str] | None = None,
+
 ) -> Optional[list[ProposalFullDetails]]:
     query = []
 
@@ -368,12 +369,6 @@ async def fetch_proposals(
         username = username.strip()
     if username:
         query.append(ElemMatch(Proposal.users, {"username": username}))
-
-    allowed_statuses = {
-        s.strip().upper()
-        for s in (saf_status or [])
-        if s and s.strip()
-    }
 
     # when SAF status filtering is requested,
     # use beamline values for SAF instrument matching. Beamline-only requests
