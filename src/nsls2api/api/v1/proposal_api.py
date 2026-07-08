@@ -27,7 +27,6 @@ from nsls2api.models.slack_models import (
 from nsls2api.services import (
     proposal_service,
     slack_service,
-    facility_service
 )
 from nsls2api.services.slack_service import get_conversation_details
 
