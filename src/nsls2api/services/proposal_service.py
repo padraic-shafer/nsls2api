@@ -370,31 +370,6 @@ async def fetch_proposals(
     if username:
         query.append(ElemMatch(Proposal.users, {"username": username}))
 
-    # when SAF status filtering is requested,
-    # use beamline values for SAF instrument matching. Beamline-only requests
-    # (without SAF filters) keep proposal-level semantics unchanged.
-    allowed_saf_instruments = set()
-    if allowed_statuses and beamline:
-        allowed_saf_instruments = {
-            beamline_name.strip().upper()
-            for beamline_name in beamline
-            if beamline_name and beamline_name.strip()
-        }
-
-    if allowed_statuses and allowed_saf_instruments:
-        query.append(
-            ElemMatch(
-                Proposal.safs,
-                {
-                    "status": {"$in": list(allowed_statuses)},
-                    "instruments": {"$in": list(allowed_saf_instruments)},
-                },
-            )
-        )
-    elif allowed_statuses:
-        query.append(
-            ElemMatch(Proposal.safs, {"status": {"$in": list(allowed_statuses)}})
-        )
     if len(query) == 0:
         proposals = (
             await Proposal.find_many()
@@ -413,16 +388,16 @@ async def fetch_proposals(
         )
 
     # SAF filtering: query narrows matching proposals, this block trims nested SAFs.
-    if allowed_statuses or allowed_saf_instruments:
+    if saf_status or beamline:
         filtered_proposals = []
         for proposal in proposals:
             proposal.safs = [
                 saf
                 for saf in (proposal.safs or [])
                 if saf.saf_id
-                and (not allowed_statuses or (saf.status or "").strip().upper() in allowed_statuses)
-                and (not allowed_saf_instruments or any(
-                    i.upper() in allowed_saf_instruments for i in (saf.instruments or [])
+                and (not saf_status or (saf.status or "").strip().upper() in {s.strip().upper() for s in saf_status})
+                and (not beamline or any(
+                    i.upper() in {b.strip().upper() for b in beamline} for i in (saf.instruments or [])
                 ))
             ]
 
