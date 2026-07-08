@@ -117,11 +117,11 @@ async def get_proposals(
         beamline=beamline,
         cycle=cycle,
         facility=facility,
+        username=username,
+        saf_status=saf_status,
         page_size=page_size,
         page=page,
         include_directories=include_directories,
-        username=username,
-        saf_status=saf_status,
     )
     
 
