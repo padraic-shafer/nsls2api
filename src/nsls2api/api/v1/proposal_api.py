@@ -105,7 +105,7 @@ async def get_proposals(
     cycle: Annotated[list[str], Query()] = [],
     facility: Annotated[list[FacilityName], Query()] = [FacilityName.nsls2],
     username: str | None = Query(None, description="Filter proposals by username"),
-    saf_status: list[str] | None = Query(default=None, description="Filter proposals and SAF's by SAF status"),
+    saf_status: list[str] | None = Query(default=None, description="Filter proposals and SAFs by SAF status"),
     page_size: int = Query(10, ge=1, le=200),
     page: int = Query(1, ge=1),
     include_directories: bool = False,
