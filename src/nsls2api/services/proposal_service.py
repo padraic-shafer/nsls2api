@@ -353,6 +353,7 @@ async def fetch_proposals(
 
 ) -> Optional[list[ProposalFullDetails]]:
     query = []
+    saf_status_upper: list[str] = []
 
     
     if beamline:
@@ -369,6 +370,18 @@ async def fetch_proposals(
         username = username.strip()
     if username:
         query.append(ElemMatch(Proposal.users, {"username": username}))
+
+    if saf_status:
+        saf_status_upper = [s.strip().upper() for s in saf_status if s and s.strip()]
+        query.append(
+            ElemMatch(
+                Proposal.safs,
+                {
+                    "saf_id": {"$ne": None},
+                    "status": {"$in": saf_status_upper},
+                }
+            )
+        )
 
     if len(query) == 0:
         proposals = (
@@ -387,24 +400,19 @@ async def fetch_proposals(
             .to_list()
         )
 
-    # SAF filtering: query narrows matching proposals, this block trims nested SAFs.
-    if saf_status:
+    # Trim SAFs in-memory so response SAFs match requested statuses only.
+    if saf_status_upper:
         filtered_proposals = []
         for proposal in proposals:
             proposal.safs = [
                 saf
                 for saf in (proposal.safs or [])
                 if saf.saf_id
-                and (not saf_status or (saf.status or "").strip().upper() in {s.strip().upper() for s in saf_status})
+                and (saf.status or "").strip().upper() in saf_status_upper
             ]
-
-            if not proposal.safs:
-                continue
-
-            filtered_proposals.append(proposal)
-
+            if proposal.safs:
+                filtered_proposals.append(proposal)
         proposals = filtered_proposals
-
 
     # Add directories field to each proposal
     if include_directories:
