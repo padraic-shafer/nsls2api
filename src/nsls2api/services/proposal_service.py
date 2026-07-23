@@ -372,12 +372,11 @@ async def fetch_proposals(
         query.append(ElemMatch(Proposal.users, {"username": username}))
 
     if saf_status:
-        saf_status_upper = [s.strip().upper() for s in saf_status if s and s.strip()]
+        saf_status_upper = [s.strip().upper() for s in saf_status if s.strip()]
         query.append(
             ElemMatch(
                 Proposal.safs,
                 {
-                    "saf_id": {"$ne": None},
                     "status": {"$in": saf_status_upper},
                 }
             )
@@ -407,8 +406,7 @@ async def fetch_proposals(
             proposal.safs = [
                 saf
                 for saf in (proposal.safs or [])
-                if saf.saf_id
-                and (saf.status or "").strip().upper() in saf_status_upper
+                if saf.status in saf_status_upper
             ]
             if proposal.safs:
                 filtered_proposals.append(proposal)
