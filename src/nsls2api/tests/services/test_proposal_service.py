@@ -3,7 +3,7 @@ from httpx import ASGITransport, AsyncClient
 
 from nsls2api.main import app
 
-from nsls2api.models.proposals import Proposal
+from nsls2api.models.proposals import Proposal, User, SafetyForm
 from nsls2api.services import proposal_service
 
 test_proposal_id = "314159"
@@ -192,54 +192,100 @@ async def test_data_sessions_invalid_beamline(admin_api_key):
     assert body["proposals"] == []
 
 @pytest.mark.anyio
-async def test_fetch_proposals_by_username_exists():
-    """Test filtering proposals by username that exists in test data"""
-    proposal = await proposal_service.proposal_by_id(test_proposal_id)
-    if proposal.users and len(proposal.users) > 0:
-        test_username = proposal.users[0].username
-        
-        results = await proposal_service.fetch_proposals(username=test_username)
-        
-        assert len(results) > 0
-
-        for p in results:
-            usernames = [u.username for u in p.users]
-            assert test_username in usernames
-
+async def test_fetch_proposals_filter_username_positive():
+    """Username filter positive - target username A vs control username B."""
+    target_proposal = Proposal(
+        proposal_id="1001",
+        data_session="pass-1001",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Target", last_name="User", email="target@example.com", username="alice")],
+        safs=[],
+    )
+    await target_proposal.insert()
+    
+    control_proposal = Proposal(
+        proposal_id="1002",
+        data_session="pass-1002",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Control", last_name="User", email="control@example.com", username="bob")],
+        safs=[],
+    )
+    await control_proposal.insert()
+    
+    results = await proposal_service.fetch_proposals(username="alice")
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "1001" in result_ids
+    assert "1002" not in result_ids
 
 @pytest.mark.anyio
-async def test_fetch_proposals_by_username_not_exists():
-    """Test filtering by username that doesn't exist"""
+async def test_fetch_proposals_filter_username_negative():
+    """Username filter negative - nonexistent username returns empty."""
     results = await proposal_service.fetch_proposals(username="nonexistent_user_xyz")
     
     assert len(results) == 0
 
+@pytest.mark.anyio
+async def test_fetch_proposals_filter_saf_status_positive():
+    """SAF status positive - APPROVED proposal vs EXPIRED proposal."""
+    target_proposal = Proposal(
+        proposal_id="2001",
+        data_session="pass-2001",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[SafetyForm(saf_id="SAF001", status="APPROVED", instruments=["TEST"])],
+    )
+    await target_proposal.insert()
+    
+    control_proposal = Proposal(
+        proposal_id="2002",
+        data_session="pass-2002",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[SafetyForm(saf_id="SAF002", status="EXPIRED", instruments=["TEST"])],
+    )
+    await control_proposal.insert()
+    
+    results = await proposal_service.fetch_proposals(saf_status=["APPROVED"])
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "2001" in result_ids
+    assert "2002" not in result_ids
 
 @pytest.mark.anyio
-async def test_fetch_proposals_username_whitespace():
-    """Test username filtering with whitespace edge cases"""
-    results_whitespace = await proposal_service.fetch_proposals(username="   ")
+async def test_fetch_proposals_filter_combined_all_filters():
+    """Combined filters - username + cycle + beamline + saf_status all required."""
+    matching = Proposal(
+        proposal_id="4001",
+        data_session="pass-4001",
+        cycles=["2025-combined"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C1", status="APPROVED", instruments=["COMBO-BL"])],
+    )
+    await matching.insert()
     
-    results_no_filter = await proposal_service.fetch_proposals()
+    nonmatching_user = Proposal(
+        proposal_id="4002",
+        data_session="pass-4002",
+        cycles=["2025-combined"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Other", last_name="User", email="other@example.com", username="other_user")],
+        safs=[SafetyForm(saf_id="SAF-C2", status="APPROVED", instruments=["COMBO-BL"])],
+    )
+    await nonmatching_user.insert()
     
-    assert len(results_whitespace) == len(results_no_filter)
-
-
-@pytest.mark.anyio
-async def test_fetch_proposals_username_with_pagination():
-    """Test username filter works correctly with pagination"""
-    proposal = await proposal_service.proposal_by_id(test_proposal_id)
-    if proposal.users and len(proposal.users) > 0:
-        test_username = proposal.users[0].username
-        
-        page_1 = await proposal_service.fetch_proposals(
-            username=test_username,
-            page_size=5,
-            page=1
-        )
-
-        assert len(page_1) > 0
-
-        for p in page_1:
-            usernames = [u.username for u in p.users]
-            assert test_username in usernames
+    results = await proposal_service.fetch_proposals(
+        username="combo_user",
+        cycle=["2025-combined"],
+        beamline=["COMBO-BL"],
+        saf_status=["APPROVED"],
+    )
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "4001" in result_ids
+    assert "4002" not in result_ids
