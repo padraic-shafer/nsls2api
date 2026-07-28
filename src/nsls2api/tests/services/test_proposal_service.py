@@ -258,7 +258,7 @@ async def test_fetch_proposals_filter_saf_status_positive():
 
 @pytest.mark.anyio
 async def test_fetch_proposals_filter_saf_status_multiple():
-    """SAF status positive - APPROVED proposal vs EXPIRED proposal."""
+    """SAF status multiple - find only proposals and SAFs with specified statuses."""
     target_proposal = Proposal(
         proposal_id="3001",
         data_session="pass-3001",
@@ -273,10 +273,25 @@ async def test_fetch_proposals_filter_saf_status_multiple():
     )
     await target_proposal.insert()
     
+    control_proposal = Proposal(
+        proposal_id="3002",
+        data_session="pass-3002",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[
+            SafetyForm(saf_id="SAF004", status="CLOSED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF005", status="EXPIRED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF006", status="HOLD", instruments=["TEST"]),
+        ],
+    )
+    await control_proposal.insert()
+    
     results = await proposal_service.fetch_proposals(saf_status=["APPROVED", "DRAFT"])
     
     result_ids = {p.proposal_id for p in results}
     assert "3001" in result_ids
+    assert "3002" not in result_ids
 
     safs = next(p.safs for p in results)
     saf_statuses = {saf.status for saf in safs}
