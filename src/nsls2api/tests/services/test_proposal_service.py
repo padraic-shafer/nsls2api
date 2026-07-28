@@ -322,6 +322,36 @@ async def test_fetch_proposals_filter_combined_all_filters():
     )
     await nonmatching_user.insert()
     
+    nonmatching_cycle = Proposal(
+        proposal_id="4003",
+        data_session="pass-4003",
+        cycles=["2025-other"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C3", status="APPROVED", instruments=["COMBO-BL"])],
+    )
+    await nonmatching_cycle.insert()
+    
+    nonmatching_beamline = Proposal(
+        proposal_id="4004",
+        data_session="pass-4004",
+        cycles=["2025-combined"],
+        instruments=["OTHER-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C4", status="APPROVED", instruments=["OTHER-BL"])],
+    )
+    await nonmatching_beamline.insert()
+    
+    nonmatching_saf_status = Proposal(
+        proposal_id="4005",
+        data_session="pass-4005",
+        cycles=["2025-combined"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C5", status="DRAFT", instruments=["COMBO-BL"])],
+    )
+    await nonmatching_saf_status.insert()
+    
     results = await proposal_service.fetch_proposals(
         username="combo_user",
         cycle=["2025-combined"],
@@ -332,3 +362,6 @@ async def test_fetch_proposals_filter_combined_all_filters():
     result_ids = {p.proposal_id for p in results}
     assert "4001" in result_ids
     assert "4002" not in result_ids
+    assert "4003" not in result_ids
+    assert "4004" not in result_ids
+    assert "4005" not in result_ids
