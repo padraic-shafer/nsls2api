@@ -257,6 +257,34 @@ async def test_fetch_proposals_filter_saf_status_positive():
     assert "2002" not in result_ids
 
 @pytest.mark.anyio
+async def test_fetch_proposals_filter_saf_status_multiple():
+    """SAF status positive - APPROVED proposal vs EXPIRED proposal."""
+    target_proposal = Proposal(
+        proposal_id="3001",
+        data_session="pass-3001",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[
+            SafetyForm(saf_id="SAF001", status="APPROVED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF002", status="EXPIRED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF003", status="DRAFT", instruments=["TEST"]),
+        ],
+    )
+    await target_proposal.insert()
+    
+    results = await proposal_service.fetch_proposals(saf_status=["APPROVED", "DRAFT"])
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "3001" in result_ids
+
+    safs = next(p.safs for p in results)
+    saf_statuses = {saf.status for saf in safs}
+    assert "APPROVED" in saf_statuses
+    assert "DRAFT" in saf_statuses
+    assert "EXPIRED" not in saf_statuses
+
+@pytest.mark.anyio
 async def test_fetch_proposals_filter_combined_all_filters():
     """Combined filters - username + cycle + beamline + saf_status all required."""
     matching = Proposal(
