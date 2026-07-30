@@ -372,7 +372,11 @@ async def fetch_proposals(
         query.append(ElemMatch(Proposal.users, {"username": username}))
 
     if saf_status:
-        saf_status_upper = [s.strip().upper() for s in saf_status if s.strip()]
+        saf_status_upper = [
+            stripped.upper()
+            for s in saf_status
+            if (stripped := s.strip())
+        ]
         query.append(
             ElemMatch(
                 Proposal.safs,
