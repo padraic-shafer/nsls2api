@@ -104,19 +104,26 @@ async def get_proposals(
     beamline: Annotated[list[str], Query()] = [],
     cycle: Annotated[list[str], Query()] = [],
     facility: Annotated[list[FacilityName], Query()] = [FacilityName.nsls2],
+    username: str | None = Query(None, description="Filter proposals by username"),
+    saf_status: list[str] | None = Query(default=None, description="Filter proposals and SAFs by SAF status"),
     page_size: int = Query(10, ge=1, le=200),
     page: int = Query(1, ge=1),
     include_directories: bool = False,
 ):
+
+
     proposal_list = await proposal_service.fetch_proposals(
         proposal_id=proposal_id,
         beamline=beamline,
         cycle=cycle,
         facility=facility,
+        username=username,
+        saf_status=saf_status,
         page_size=page_size,
         page=page,
         include_directories=include_directories,
     )
+    
 
     response_model = {
         "proposals": proposal_list,

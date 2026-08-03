@@ -3,7 +3,7 @@ from httpx import ASGITransport, AsyncClient
 
 from nsls2api.main import app
 
-from nsls2api.models.proposals import Proposal
+from nsls2api.models.proposals import Proposal, User, SafetyForm
 from nsls2api.services import proposal_service
 
 test_proposal_id = "314159"
@@ -190,3 +190,178 @@ async def test_data_sessions_invalid_beamline(admin_api_key):
     body = resp.json()
     assert body["count"] == 0
     assert body["proposals"] == []
+
+@pytest.mark.anyio
+async def test_fetch_proposals_filter_username_positive():
+    """Username filter positive - target username A vs control username B."""
+    target_proposal = Proposal(
+        proposal_id="1001",
+        data_session="pass-1001",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Target", last_name="User", email="target@example.com", username="alice")],
+        safs=[],
+    )
+    await target_proposal.insert()
+    
+    control_proposal = Proposal(
+        proposal_id="1002",
+        data_session="pass-1002",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Control", last_name="User", email="control@example.com", username="bob")],
+        safs=[],
+    )
+    await control_proposal.insert()
+    
+    results = await proposal_service.fetch_proposals(username="alice")
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "1001" in result_ids
+    assert "1002" not in result_ids
+
+@pytest.mark.anyio
+async def test_fetch_proposals_filter_username_negative():
+    """Username filter negative - nonexistent username returns empty."""
+    results = await proposal_service.fetch_proposals(username="nonexistent_user_xyz")
+    
+    assert len(results) == 0
+
+@pytest.mark.anyio
+async def test_fetch_proposals_filter_saf_status_positive():
+    """SAF status positive - APPROVED proposal vs EXPIRED proposal."""
+    target_proposal = Proposal(
+        proposal_id="2001",
+        data_session="pass-2001",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[SafetyForm(saf_id="SAF001", status="APPROVED", instruments=["TEST"])],
+    )
+    await target_proposal.insert()
+    
+    control_proposal = Proposal(
+        proposal_id="2002",
+        data_session="pass-2002",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[SafetyForm(saf_id="SAF002", status="EXPIRED", instruments=["TEST"])],
+    )
+    await control_proposal.insert()
+    
+    results = await proposal_service.fetch_proposals(saf_status=["APPROVED"])
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "2001" in result_ids
+    assert "2002" not in result_ids
+
+@pytest.mark.anyio
+async def test_fetch_proposals_filter_saf_status_multiple():
+    """SAF status multiple - find only proposals and SAFs with specified statuses."""
+    target_proposal = Proposal(
+        proposal_id="3001",
+        data_session="pass-3001",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[
+            SafetyForm(saf_id="SAF001", status="APPROVED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF002", status="EXPIRED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF003", status="DRAFT", instruments=["TEST"]),
+        ],
+    )
+    await target_proposal.insert()
+    
+    control_proposal = Proposal(
+        proposal_id="3002",
+        data_session="pass-3002",
+        cycles=["2025-1"],
+        instruments=["TEST"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com")],
+        safs=[
+            SafetyForm(saf_id="SAF004", status="CLOSED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF005", status="EXPIRED", instruments=["TEST"]),
+            SafetyForm(saf_id="SAF006", status="HOLD", instruments=["TEST"]),
+        ],
+    )
+    await control_proposal.insert()
+    
+    results = await proposal_service.fetch_proposals(saf_status=["APPROVED", "DRAFT"])
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "3001" in result_ids
+    assert "3002" not in result_ids
+
+    safs = next(p.safs for p in results)
+    saf_statuses = {saf.status for saf in safs}
+    assert "APPROVED" in saf_statuses
+    assert "DRAFT" in saf_statuses
+    assert "EXPIRED" not in saf_statuses
+
+@pytest.mark.anyio
+async def test_fetch_proposals_filter_combined_all_filters():
+    """Combined filters - username + cycle + beamline + saf_status all required."""
+    matching = Proposal(
+        proposal_id="4001",
+        data_session="pass-4001",
+        cycles=["2025-combined"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C1", status="APPROVED", instruments=["COMBO-BL"])],
+    )
+    await matching.insert()
+    
+    nonmatching_user = Proposal(
+        proposal_id="4002",
+        data_session="pass-4002",
+        cycles=["2025-combined"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Other", last_name="User", email="other@example.com", username="other_user")],
+        safs=[SafetyForm(saf_id="SAF-C2", status="APPROVED", instruments=["COMBO-BL"])],
+    )
+    await nonmatching_user.insert()
+    
+    nonmatching_cycle = Proposal(
+        proposal_id="4003",
+        data_session="pass-4003",
+        cycles=["2025-other"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C3", status="APPROVED", instruments=["COMBO-BL"])],
+    )
+    await nonmatching_cycle.insert()
+    
+    nonmatching_beamline = Proposal(
+        proposal_id="4004",
+        data_session="pass-4004",
+        cycles=["2025-combined"],
+        instruments=["OTHER-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C4", status="APPROVED", instruments=["OTHER-BL"])],
+    )
+    await nonmatching_beamline.insert()
+    
+    nonmatching_saf_status = Proposal(
+        proposal_id="4005",
+        data_session="pass-4005",
+        cycles=["2025-combined"],
+        instruments=["COMBO-BL"],
+        users=[User(first_name="Test", last_name="User", email="test@example.com", username="combo_user")],
+        safs=[SafetyForm(saf_id="SAF-C5", status="DRAFT", instruments=["COMBO-BL"])],
+    )
+    await nonmatching_saf_status.insert()
+    
+    results = await proposal_service.fetch_proposals(
+        username="combo_user",
+        cycle=["2025-combined"],
+        beamline=["COMBO-BL"],
+        saf_status=["APPROVED"],
+    )
+    
+    result_ids = {p.proposal_id for p in results}
+    assert "4001" in result_ids
+    assert "4002" not in result_ids
+    assert "4003" not in result_ids
+    assert "4004" not in result_ids
+    assert "4005" not in result_ids
