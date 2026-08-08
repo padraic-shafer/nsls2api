@@ -15,7 +15,7 @@ from nsls2api.api.models.proposal_model import (
     RecentProposalsList,
     SingleProposal,
     UsernamesList,
-    ProposalIdDataSessionList
+    ProposalIdDataSessionList,
 )
 from nsls2api.infrastructure.logging import logger
 from nsls2api.infrastructure.security import get_current_user, validate_admin_role
@@ -105,12 +105,13 @@ async def get_proposals(
     cycle: Annotated[list[str], Query()] = [],
     facility: Annotated[list[FacilityName], Query()] = [FacilityName.nsls2],
     username: str | None = Query(None, description="Filter proposals by username"),
-    saf_status: list[str] | None = Query(default=None, description="Filter proposals and SAFs by SAF status"),
+    saf_status: list[str] | None = Query(
+        default=None, description="Filter proposals and SAFs by SAF status"
+    ),
     page_size: int = Query(10, ge=1, le=200),
     page: int = Query(1, ge=1),
     include_directories: bool = False,
 ):
-
 
     proposal_list = await proposal_service.fetch_proposals(
         proposal_id=proposal_id,
@@ -123,7 +124,6 @@ async def get_proposals(
         page=page,
         include_directories=include_directories,
     )
-    
 
     response_model = {
         "proposals": proposal_list,
@@ -133,7 +133,6 @@ async def get_proposals(
     }
 
     return response_model
-
 
 
 @router.get(
@@ -156,7 +155,7 @@ async def get_proposals_data_sessions(
         cycle=cycle,
         facility=facility,
         page_size=page_size,
-        page=page
+        page=page,
     )
 
     response_model = {

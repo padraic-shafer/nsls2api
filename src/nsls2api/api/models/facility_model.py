@@ -18,6 +18,7 @@ class FacilityCurrentOperatingCycleResponseModel(pydantic.BaseModel):
     facility: str
     cycle: str
 
+
 class FacilityCycleDetailsResponseModel(pydantic.BaseModel):
     facility: str
     cycle: str

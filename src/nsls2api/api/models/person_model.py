@@ -104,12 +104,14 @@ class UnixInfo(pydantic.BaseModel):
     homeDirectory: Optional[str] = None
     loginShell: Optional[str] = None
 
+
 class IdentityInfo(pydantic.BaseModel):
     displayName: Optional[str] = None
     email: Optional[str] = None
     department: Optional[str] = None
     manager: Optional[str] = None
     unix: Optional[UnixInfo] = None
+
 
 class AccountInfo(pydantic.BaseModel):
     accountExpires: Optional[str] = None
@@ -126,6 +128,7 @@ class AccountInfo(pydantic.BaseModel):
     uSNCreated: Optional[int] = None
     uSNChanged: Optional[int] = None
 
+
 class DirectoryInfo(pydantic.BaseModel):
     objectGUID: Optional[str] = None
     objectSid: Optional[str] = None
@@ -133,6 +136,7 @@ class DirectoryInfo(pydantic.BaseModel):
     distinguishedName: Optional[str] = None
     whenCreated: Optional[str] = None
     whenChanged: Optional[str] = None
+
 
 class AttributesInfo(pydantic.BaseModel):
     sn: Optional[str] = None
@@ -145,8 +149,10 @@ class AttributesInfo(pydantic.BaseModel):
     instanceType: Optional[str] = None
     objectClass: List[str] = pydantic.Field(default_factory=list)
 
+
 class LDAPUserResponse(pydantic.BaseModel):
     """Complete LDAP user data from direct LDAP query"""
+
     dn: Optional[str] = None
     status: str = "Read"
     readTime: Optional[str] = None
