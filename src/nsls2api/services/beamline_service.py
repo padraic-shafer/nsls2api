@@ -76,7 +76,9 @@ async def all_services(name: str) -> ServicesOnly | None:
 
 
 async def detectors(name: str) -> list[Detector]:
-    beamline_detectors = await Beamline.find_one(Beamline.name == name.upper()).project(
+    beamline_detectors = await Beamline.find_one(
+        Beamline.name == name.upper()
+    ).project(
         DetectorView
     )
     if beamline_detectors is None:
