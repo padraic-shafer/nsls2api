@@ -41,8 +41,8 @@ class HTTPXClientWrapper:
 
 async def _call_async_webservice(
     url: str,
-    auth: tuple = None,
-    headers: dict = None,
+    auth: tuple | None = None,
+    headers: dict | None = None,
 ) -> Response:
     transport = None
 
@@ -66,7 +66,7 @@ async def _call_async_webservice(
 
 
 async def _call_async_webservice_with_client(
-    url: str, auth: tuple = None, headers: dict = None, client: httpx.AsyncClient = None
+    url: str, auth: tuple | None = None, headers: dict | None = None, client: httpx.AsyncClient = None
 ) -> Response:
     if client is None:
         # Then just use the general method that creates a client each time

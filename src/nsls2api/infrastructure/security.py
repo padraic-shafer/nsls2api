@@ -80,7 +80,7 @@ async def generate_api_key(username: str, usertype=ApiUserType.user):
 
     except Exception as e:
         logger.exception(e)
-        raise e
+        raise
 
 
 async def set_user_role(username: str, role: ApiUserRole):

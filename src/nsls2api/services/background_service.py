@@ -49,7 +49,7 @@ async def start_job(job_id: bson.ObjectId) -> BackgroundJob | None:
 
 
 async def complete_job(
-    job_id: bson.ObjectId, processing_status: JobStatus, log_message: str = None
+    job_id: bson.ObjectId, processing_status: JobStatus, log_message: str | None = None
 ) -> BackgroundJob | None:
     job = await job_by_id(job_id)
     if not job:

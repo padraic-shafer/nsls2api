@@ -40,7 +40,7 @@ def get_user_info(upn, ldap_server, ldap_base_dn, ldap_bind_user, bind_password)
             return None
 
         entry = conn.entries[0]
-        user = dict()
+        user = {}
         for attribute in entry.entry_attributes:
             value = entry[attribute].value
             if attribute in ("objectGUID", "objectSid"):

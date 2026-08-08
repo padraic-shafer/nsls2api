@@ -116,6 +116,6 @@ async def is_user_in_group(username: str, group: str):
     _user_found = False
     users = await get_users_in_group(group)
     _user_found: bool = any(
-        [user for user in users if user["sAMAccountName"] == username]
+        user for user in users if user["sAMAccountName"] == username
     )
     return _user_found
