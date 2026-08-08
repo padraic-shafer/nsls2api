@@ -1,5 +1,4 @@
 import datetime
-from typing import List, Optional
 
 import beanie
 import pydantic
@@ -12,31 +11,31 @@ from nsls2api.models.slack_models import SlackChannel
 class SafetyForm(pydantic.BaseModel):
     saf_id: str
     status: str
-    instruments: Optional[list[str]]
+    instruments: list[str] | None
 
 
 class User(pydantic.BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
     email: str
-    bnl_id: Optional[str] = None
-    username: Optional[str] = None
+    bnl_id: str | None = None
+    username: str | None = None
     is_pi: bool = False
-    orcid: Optional[str] = None
+    orcid: str | None = None
 
 
 # -- Shared Base --
 class ProposalBase(pydantic.BaseModel):
     proposal_id: str
     data_session: str
-    title: Optional[str] = None
-    type: Optional[str] = None
-    pass_type_id: Optional[str] = None
-    instruments: Optional[List[str]] = []
-    cycles: Optional[List[str]] = []
-    users: Optional[List[User]] = []
-    safs: Optional[List[SafetyForm]] = []
-    slack_channels: Optional[List[SlackChannel]] = []
+    title: str | None = None
+    type: str | None = None
+    pass_type_id: str | None = None
+    instruments: list[str] | None = []
+    cycles: list[str] | None = []
+    users: list[User] | None = []
+    safs: list[SafetyForm] | None = []
+    slack_channels: list[SlackChannel] | None = []
     created_on: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )

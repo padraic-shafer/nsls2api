@@ -1,4 +1,3 @@
-from typing import Optional
 
 import bson
 import fastapi
@@ -155,7 +154,7 @@ async def sync_cycles(facility: FacilityName = FacilityName.nsls2):
 async def sync_update_cycles(
     request: fastapi.Request,
     facility: FacilityName = FacilityName.nsls2,
-    cycle: Optional[str] = None,
+    cycle: str | None = None,
 ):
     sync_params = JobSyncParameters(facility=facility, sync_source=JobSyncSource.PASS)
 

@@ -1,4 +1,3 @@
-from typing import Optional
 
 from starlette.requests import Request
 
@@ -12,8 +11,8 @@ class UserDiagnosticsViewModel(ViewModelBase):
         super().__init__(request)
 
         self.username = username
-        self.person: Optional[Person] = None
-        self.diagnostic_message: Optional[str] = None
+        self.person: Person | None = None
+        self.diagnostic_message: str | None = None
 
     async def load(self):
         try:

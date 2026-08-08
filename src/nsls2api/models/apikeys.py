@@ -1,6 +1,5 @@
 import datetime
 from enum import StrEnum
-from typing import Optional
 from uuid import UUID, uuid4
 
 import beanie
@@ -34,7 +33,7 @@ class ApiUser(beanie.Document):
     id: UUID = Field(default_factory=uuid4)
     username: str
     type: ApiUserType
-    role: Optional[ApiUserRole] = ApiUserRole.user
+    role: ApiUserRole | None = ApiUserRole.user
     created_on: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )
@@ -72,10 +71,10 @@ class ApiKey(beanie.Document):
     username: str
     first_eight: pydantic.constr(min_length=8, max_length=8)
     hashed_key: str
-    note: Optional[str] = ""
+    note: str | None = ""
     # scopes: Optional[list[str]] = pydantic.Field(..., example=["inherit"])
     valid: bool = True
-    expires_after: Optional[datetime.datetime] = None
+    expires_after: datetime.datetime | None = None
     created_on: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )

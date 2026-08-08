@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional
 
 import beanie
 import pydantic
@@ -8,9 +7,9 @@ import pydantic
 class ProposalType(beanie.Document):
     code: str
     facility_id: str | None = None
-    description: Optional[str] = None
-    pass_id: Optional[str] = None
-    pass_description: Optional[str] = None
+    description: str | None = None
+    pass_id: str | None = None
+    pass_description: str | None = None
     created_on: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )

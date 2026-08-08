@@ -1,6 +1,5 @@
 import datetime
 from enum import StrEnum
-from typing import Optional
 
 import beanie
 import pydantic
@@ -35,26 +34,26 @@ class JobActions(StrEnum):
 
 
 class JobSyncParameters(pydantic.BaseModel):
-    proposal_id: Optional[str] = None
-    facility: Optional[FacilityName] = None
-    year: Optional[int] = None
-    cycle: Optional[str] = None
-    proposal_type_id: Optional[str] = None
-    beamline: Optional[str] = None
-    sync_source: Optional[JobSyncSource] = JobSyncSource.PASS
+    proposal_id: str | None = None
+    facility: FacilityName | None = None
+    year: int | None = None
+    cycle: str | None = None
+    proposal_type_id: str | None = None
+    beamline: str | None = None
+    sync_source: JobSyncSource | None = JobSyncSource.PASS
 
 
 class BackgroundJob(beanie.Document):
     created_date: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )
-    started_date: Optional[datetime.datetime] = None
-    finished_date: Optional[datetime.datetime] = None
+    started_date: datetime.datetime | None = None
+    finished_date: datetime.datetime | None = None
     processing_status: str = JobStatus.awaiting
     is_finished: bool = False
     action: str
-    sync_parameters: Optional[JobSyncParameters] = None
-    log_message: Optional[str] = None
+    sync_parameters: JobSyncParameters | None = None
+    log_message: str | None = None
 
     class Settings:
         name = "jobs"

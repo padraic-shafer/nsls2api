@@ -1,7 +1,7 @@
 # This file is just a place to play and test stuff while I am messing about
 # This is not intended to be a long lived or permanent file.
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from fastapi import Depends, FastAPI
 
@@ -9,7 +9,7 @@ app = FastAPI()
 
 
 async def common_parameters(
-    q: Union[str, None] = None, skip: int = 0, limit: int = 100
+    q: str | None = None, skip: int = 0, limit: int = 100
 ):
     return {"q": q, "skip": skip, "limit": limit}
 

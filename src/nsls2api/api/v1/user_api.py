@@ -1,7 +1,7 @@
 import asyncio
 
 import fastapi
-from fastapi import HTTPException, Request, Header
+from fastapi import Header, HTTPException
 
 from nsls2api.api.models.person_model import DataSessionAccess, LDAPUserResponse, Person
 from nsls2api.infrastructure.security import get_settings

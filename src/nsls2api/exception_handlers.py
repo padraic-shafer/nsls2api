@@ -1,7 +1,6 @@
 from asgi_correlation_id import correlation_id
 from fastapi import HTTPException, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import JSONResponse
 
 from nsls2api.main import app
 

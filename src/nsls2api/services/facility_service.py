@@ -1,7 +1,6 @@
 import datetime
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Optional
 
 from beanie.odm.operators.find.comparison import In
 from beanie.odm.operators.update.general import Set
@@ -14,8 +13,8 @@ from nsls2api.models.facilities import Facility
 
 class CycleOperationError(Exception):
     """Base exception for cycle operations."""
+    # No additional methods or attributes are needed for this class.
 
-    pass
 
 
 class CycleNotFoundError(CycleOperationError):
@@ -42,7 +41,7 @@ class CycleUpdateError(CycleOperationError):
 class CycleVerificationError(CycleOperationError):
     """Raised when cycle verification fails after an update."""
 
-    def __init__(self, facility: str, expected_cycle: str, actual_cycle: Optional[str]):
+    def __init__(self, facility: str, expected_cycle: str, actual_cycle: str | None):
         self.facility = facility
         self.expected_cycle = expected_cycle
         self.actual_cycle = actual_cycle
@@ -71,7 +70,7 @@ async def all_facilities() -> list[Facility]:
     return await Facility.find().to_list()
 
 
-async def facility_cycles(facility: str) -> Optional[list[str]]:
+async def facility_cycles(facility: str) -> list[str] | None:
     """
     Facility Cycles
 
@@ -92,7 +91,7 @@ async def facility_cycles(facility: str) -> Optional[list[str]]:
 
 async def facility_cycle_by_date(
     facility: FacilityName, date: datetime.datetime
-) -> Optional[Cycle]:
+) -> Cycle | None:
     """
     Find the cycle for a facility that contains the given date.
 
@@ -108,7 +107,7 @@ async def facility_cycle_by_date(
     return cycle if cycle else None
 
 
-async def facility_by_pass_id(pass_user_facility_id: str) -> Optional[Facility]:
+async def facility_by_pass_id(pass_user_facility_id: str) -> Facility | None:
     """
     Facility by PASS ID
 
@@ -120,7 +119,7 @@ async def facility_by_pass_id(pass_user_facility_id: str) -> Optional[Facility]:
     return await Facility.find_one(Facility.pass_facility_id == pass_user_facility_id)
 
 
-async def pass_id_for_facility(facility_id: str) -> Optional[str]:
+async def pass_id_for_facility(facility_id: str) -> str | None:
     """
     PASS ID for Facility
 
@@ -134,13 +133,13 @@ async def pass_id_for_facility(facility_id: str) -> Optional[str]:
     return facility.pass_facility_id if facility else None
 
 
-async def data_roles_by_user(username: str) -> Optional[list[str]]:
+async def data_roles_by_user(username: str) -> list[str] | None:
     facilities = await Facility.find(In(Facility.data_admins, [username])).to_list()
     facility_names = [f.facility_id for f in facilities if f.facility_id is not None]
     return facility_names
 
 
-async def data_admin_group(facility_name: str) -> Optional[str]:
+async def data_admin_group(facility_name: str) -> str | None:
     """
     Retrieves the data admin group for a given facility name.
 
@@ -188,7 +187,7 @@ async def update_data_admins(facility_id: str, data_admins: list[str]):
     )
 
 
-async def current_operating_cycle(facility_name: str) -> Optional[str]:
+async def current_operating_cycle(facility_name: str) -> str | None:
     """
     Current Operating Cycle
 
@@ -199,7 +198,7 @@ async def current_operating_cycle(facility_name: str) -> Optional[str]:
     """
     cycle = await Cycle.find_one(
         Cycle.facility == facility_name,
-        Cycle.is_current_operating_cycle == True,  # noqa: E712
+        Cycle.is_current_operating_cycle == True,  # noqa: E712 # Operator is used by Beanie query
     )
 
     return cycle.name if cycle else None
@@ -207,8 +206,8 @@ async def current_operating_cycle(facility_name: str) -> Optional[str]:
 
 @dataclass
 class CycleChangeState:
-    new_cycle: Optional[Cycle] = None
-    previous_cycle: Optional[Cycle] = None
+    new_cycle: Cycle | None = None
+    previous_cycle: Cycle | None = None
     is_successful: bool = False
 
 
@@ -243,7 +242,7 @@ async def cycle_change_context(facility: str, cycle: str):
         # Get the current active cycle
         state.previous_cycle = await Cycle.find_one(
             Cycle.facility == facility,
-            Cycle.is_current_operating_cycle == True,  # noqa: E712
+            Cycle.is_current_operating_cycle == True,  # noqa: E712 # Operator is used by Beanie query
         )
 
         yield state
@@ -313,7 +312,7 @@ async def set_current_operating_cycle(facility_name: str, cycle: str) -> str:
 
 async def cycle_year(
     cycle_name: str, facility_name: FacilityName = FacilityName.nsls2
-) -> Optional[str]:
+) -> str | None:
     """
     Cycle Year
 

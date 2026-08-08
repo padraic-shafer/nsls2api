@@ -1,4 +1,3 @@
-from typing import Optional
 
 import httpx
 from rich.panel import Panel
@@ -9,7 +8,7 @@ from nsls2api.cli.utils.console import console
 
 def call_nsls2api_endpoint(
     endpoint: str, method: str = "GET", data: dict = None
-) -> Optional[httpx.Response]:
+) -> httpx.Response | None:
     """
     Call the NSLS-II API endpoint and return the response.
     """

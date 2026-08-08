@@ -1,62 +1,61 @@
 import datetime
-from typing import List, Optional
 
 import pydantic
 
 
 class BNLPerson(pydantic.BaseModel):
-    ActiveDirectoryName: Optional[str] = None
-    AltEmail: Optional[str] = None
-    AppointmentEndDate: Optional[str] = None
-    BNLEmail: Optional[str] = None
-    BNLExtension: Optional[str] = None
-    BNLFax: Optional[str] = None
-    BNLPager: Optional[str] = None
-    BNLStreet: Optional[str] = None
-    IsUSCitizen: Optional[bool] = None
-    CyberAgreementSigned: Optional[str] = None
-    DeliveryOffice: Optional[str] = None
-    DepartmentCode: Optional[str] = None
-    DepartmentId: Optional[int] = None
-    DepartmentName: Optional[str] = None
-    DisplayContactInformation: Optional[bool] = None
-    EmployeeNumber: Optional[str] = None
-    EmployeeStatus: Optional[str] = None
-    EmployeeType: Optional[str] = None
-    Facility: Optional[str] = None
-    FacilityCode: Optional[str] = None
-    FirstName: Optional[str] = None
-    Institution: Optional[str] = None
-    LastName: Optional[str] = None
-    ManagerEmail: Optional[str] = None
-    ManagerEmployeeNumber: Optional[str] = None
-    ManagerFirstName: Optional[str] = None
-    ManagerLastName: Optional[str] = None
-    TermDate: Optional[str] = None
-    TimeStamp: Optional[str] = None
+    ActiveDirectoryName: str | None = None
+    AltEmail: str | None = None
+    AppointmentEndDate: str | None = None
+    BNLEmail: str | None = None
+    BNLExtension: str | None = None
+    BNLFax: str | None = None
+    BNLPager: str | None = None
+    BNLStreet: str | None = None
+    IsUSCitizen: bool | None = None
+    CyberAgreementSigned: str | None = None
+    DeliveryOffice: str | None = None
+    DepartmentCode: str | None = None
+    DepartmentId: int | None = None
+    DepartmentName: str | None = None
+    DisplayContactInformation: bool | None = None
+    EmployeeNumber: str | None = None
+    EmployeeStatus: str | None = None
+    EmployeeType: str | None = None
+    Facility: str | None = None
+    FacilityCode: str | None = None
+    FirstName: str | None = None
+    Institution: str | None = None
+    LastName: str | None = None
+    ManagerEmail: str | None = None
+    ManagerEmployeeNumber: str | None = None
+    ManagerFirstName: str | None = None
+    ManagerLastName: str | None = None
+    TermDate: str | None = None
+    TimeStamp: str | None = None
 
 
 class ActiveDirectoryUser(pydantic.BaseModel):
-    sAMAccountName: Optional[str] = None
-    distinguishedName: Optional[str] = None
-    displayName: Optional[str] = None
-    employeeID: Optional[str] = None
-    mail: Optional[str] = None
-    description: Optional[str] = None
-    userPrincipalName: Optional[str] = None
-    pwdLastSet: Optional[str] = None
-    userAccountControl: Optional[str] = None
-    lockoutTime: Optional[str] = None
-    set_passwd: Optional[bool] = None
-    locked: Optional[bool] = None
-    was_locked: Optional[bool] = None
+    sAMAccountName: str | None = None
+    distinguishedName: str | None = None
+    displayName: str | None = None
+    employeeID: str | None = None
+    mail: str | None = None
+    description: str | None = None
+    userPrincipalName: str | None = None
+    pwdLastSet: str | None = None
+    userAccountControl: str | None = None
+    lockoutTime: str | None = None
+    set_passwd: bool | None = None
+    locked: bool | None = None
+    was_locked: bool | None = None
 
 
 class ActiveDirectoryUserGroups(pydantic.BaseModel):
-    sAMAccountName: Optional[str] = None
-    distinguishedName: Optional[str] = None
-    member: Optional[list[str]] = None
-    memberOf: Optional[list[str]] = None
+    sAMAccountName: str | None = None
+    distinguishedName: str | None = None
+    member: list[str] | None = None
+    memberOf: list[str] | None = None
 
 
 class Person(pydantic.BaseModel):
@@ -64,17 +63,17 @@ class Person(pydantic.BaseModel):
     lastname: str
     email: str
     username: str
-    bnl_id: Optional[str]
-    bnl_employee: Optional[bool] = None
-    institution: Optional[str] = None
-    orcid: Optional[str] = None
-    globus_username: Optional[str] = None
-    pass_unique_id: Optional[str] = None
-    account_locked: Optional[bool] = None
-    cyber_agreement_signed: Optional[datetime.datetime] = None
-    facility_code: Optional[str] = None
-    facility_name: Optional[str] = None
-    citizenship: Optional[str] = None
+    bnl_id: str | None
+    bnl_employee: bool | None = None
+    institution: str | None = None
+    orcid: str | None = None
+    globus_username: str | None = None
+    pass_unique_id: str | None = None
+    account_locked: bool | None = None
+    cyber_agreement_signed: datetime.datetime | None = None
+    facility_code: str | None = None
+    facility_name: str | None = None
+    citizenship: str | None = None
 
 
 class PersonSummary(pydantic.BaseModel):
@@ -88,76 +87,76 @@ class PersonSummary(pydantic.BaseModel):
 class DataAdmins(pydantic.BaseModel):
     nsls2_dataadmin: bool = False
     lbms_dataadmin: bool = False
-    dataadmin: Optional[list] = None
+    dataadmin: list | None = None
 
 
 class DataSessionAccess(pydantic.BaseModel):
-    facility_all_access: List[str] = None
-    beamline_all_access: List[str] = None
-    data_sessions: List[str] = None
+    facility_all_access: list[str] = None
+    beamline_all_access: list[str] = None
+    data_sessions: list[str] = None
 
 
 class UnixInfo(pydantic.BaseModel):
-    uid: Optional[str] = None
-    uidNumber: Optional[str] = None
-    gidNumber: Optional[str] = None
-    homeDirectory: Optional[str] = None
-    loginShell: Optional[str] = None
+    uid: str | None = None
+    uidNumber: str | None = None
+    gidNumber: str | None = None
+    homeDirectory: str | None = None
+    loginShell: str | None = None
 
 
 class IdentityInfo(pydantic.BaseModel):
-    displayName: Optional[str] = None
-    email: Optional[str] = None
-    department: Optional[str] = None
-    manager: Optional[str] = None
-    unix: Optional[UnixInfo] = None
+    displayName: str | None = None
+    email: str | None = None
+    department: str | None = None
+    manager: str | None = None
+    unix: UnixInfo | None = None
 
 
 class AccountInfo(pydantic.BaseModel):
-    accountExpires: Optional[str] = None
-    badPasswordTime: Optional[str] = None
+    accountExpires: str | None = None
+    badPasswordTime: str | None = None
     badPwdCount: int = 0
-    pwdLastSet: Optional[str] = None
-    lastLogon: Optional[str] = None
-    userAccountControlFlags: List[str] = pydantic.Field(default_factory=list)
-    userPrincipalName: Optional[str] = None
+    pwdLastSet: str | None = None
+    lastLogon: str | None = None
+    userAccountControlFlags: list[str] = pydantic.Field(default_factory=list)
+    userPrincipalName: str | None = None
     logonCount: int = 0
-    sAMAccountName: Optional[str] = None
-    sAMAccountType: Optional[str] = None
-    lastLogoff: Optional[str] = None
-    uSNCreated: Optional[int] = None
-    uSNChanged: Optional[int] = None
+    sAMAccountName: str | None = None
+    sAMAccountType: str | None = None
+    lastLogoff: str | None = None
+    uSNCreated: int | None = None
+    uSNChanged: int | None = None
 
 
 class DirectoryInfo(pydantic.BaseModel):
-    objectGUID: Optional[str] = None
-    objectSid: Optional[str] = None
-    primaryGroupID: Optional[str] = None
-    distinguishedName: Optional[str] = None
-    whenCreated: Optional[str] = None
-    whenChanged: Optional[str] = None
+    objectGUID: str | None = None
+    objectSid: str | None = None
+    primaryGroupID: str | None = None
+    distinguishedName: str | None = None
+    whenCreated: str | None = None
+    whenChanged: str | None = None
 
 
 class AttributesInfo(pydantic.BaseModel):
-    sn: Optional[str] = None
-    givenName: Optional[str] = None
-    description: Optional[str] = None
-    gecos: Optional[str] = None
-    street: Optional[str] = None
-    codePage: Optional[str] = None
-    countryCode: Optional[str] = None
-    instanceType: Optional[str] = None
-    objectClass: List[str] = pydantic.Field(default_factory=list)
+    sn: str | None = None
+    givenName: str | None = None
+    description: str | None = None
+    gecos: str | None = None
+    street: str | None = None
+    codePage: str | None = None
+    countryCode: str | None = None
+    instanceType: str | None = None
+    objectClass: list[str] = pydantic.Field(default_factory=list)
 
 
 class LDAPUserResponse(pydantic.BaseModel):
     """Complete LDAP user data from direct LDAP query"""
 
-    dn: Optional[str] = None
+    dn: str | None = None
     status: str = "Read"
-    readTime: Optional[str] = None
-    identity: Optional[IdentityInfo] = None
-    account: Optional[AccountInfo] = None
-    directory: Optional[DirectoryInfo] = None
-    groups: List[str] = pydantic.Field(default_factory=list)
-    attributes: Optional[AttributesInfo] = None
+    readTime: str | None = None
+    identity: IdentityInfo | None = None
+    account: AccountInfo | None = None
+    directory: DirectoryInfo | None = None
+    groups: list[str] = pydantic.Field(default_factory=list)
+    attributes: AttributesInfo | None = None

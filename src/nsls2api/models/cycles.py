@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional
 
 import beanie
 import pydantic
@@ -7,16 +6,16 @@ import pydantic
 
 class Cycle(beanie.Document):
     name: str
-    accepting_proposals: Optional[bool] = False
-    is_current_operating_cycle: Optional[bool] = False
-    active: Optional[bool] = False
-    end_date: Optional[datetime.datetime]
+    accepting_proposals: bool | None = False
+    is_current_operating_cycle: bool | None = False
+    active: bool | None = False
+    end_date: datetime.datetime | None
     facility: str
-    pass_description: Optional[str]
-    pass_id: Optional[str]
-    start_date: Optional[datetime.datetime]
+    pass_description: str | None
+    pass_id: str | None
+    start_date: datetime.datetime | None
     year: str
-    proposals: Optional[list[str]] = []
+    proposals: list[str] | None = []
     created_on: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )

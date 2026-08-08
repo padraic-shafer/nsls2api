@@ -9,13 +9,13 @@ from nsls2api.api.models.proposal_model import (
     CommissioningProposalsList,
     ProposalDirectoriesList,
     ProposalFullDetailsList,
+    ProposalIdDataSessionList,
     ProposalUser,
     ProposalUserList,
     RecentProposal,
     RecentProposalsList,
     SingleProposal,
     UsernamesList,
-    ProposalIdDataSessionList,
 )
 from nsls2api.infrastructure.logging import logger
 from nsls2api.infrastructure.security import get_current_user, validate_admin_role
@@ -382,6 +382,6 @@ async def create_slack_channels_for_proposal(
     ]
     proposal.slack_channels = slack_channels
     proposal.last_updated = datetime.datetime.now()
-    await proposal.save()  # noqa - we don't need to specify any args here
+    await proposal.save()
 
     return channels

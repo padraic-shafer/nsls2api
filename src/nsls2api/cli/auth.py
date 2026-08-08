@@ -1,5 +1,4 @@
 import getpass
-from typing import Optional, Tuple
 
 import httpx
 import typer
@@ -19,7 +18,7 @@ def auth_callback(ctx: typer.Context):
     pass  # No need to call anything manually
 
 
-def verify_token(token: str) -> Tuple[bool, Optional[str]]:
+def verify_token(token: str) -> tuple[bool, str | None]:
     """
     Verify if a token is valid by making an API call.
     Returns a tuple of (is_valid, username or error_message)

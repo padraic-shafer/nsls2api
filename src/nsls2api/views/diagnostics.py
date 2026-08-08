@@ -37,7 +37,7 @@ async def diag_proposal(proposal_id: str, request: Request):
     try:
         await vm.load()
     except Exception as e:
-        print(f"Exception: {str(e)}")
+        print(f"Exception: {e!s}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     # if there was a problem in getting the information for a user then the error will not be None.

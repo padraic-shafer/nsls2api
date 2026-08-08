@@ -1,4 +1,3 @@
-import asyncio
 
 import beanie
 import click

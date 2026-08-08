@@ -1,5 +1,4 @@
 # Helper and utility functions for people/users
-from typing import Optional
 
 from nsls2api.api.models.person_model import (
     ActiveDirectoryUser,
@@ -17,7 +16,7 @@ from nsls2api.services import (
 from nsls2api.services.pass_service import get_proposals_by_person
 
 
-async def summary_details_by_username(username: str) -> Optional[PersonSummary]:
+async def summary_details_by_username(username: str) -> PersonSummary | None:
     diag_person = await diagnostic_details_by_username(username)
     # Now lets return a Person that only contains a limited
     person = PersonSummary(
@@ -30,7 +29,7 @@ async def summary_details_by_username(username: str) -> Optional[PersonSummary]:
     return person
 
 
-async def diagnostic_details_by_username(username: str) -> Optional[Person]:
+async def diagnostic_details_by_username(username: str) -> Person | None:
     try:
         bnl_person = await bnlpeople_service.get_person_by_username(username)
         ad_person: ActiveDirectoryUser = await n2sn_service.get_user_by_username(

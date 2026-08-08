@@ -1,4 +1,3 @@
-from typing import Optional
 
 import pydantic
 
@@ -15,8 +14,8 @@ class StatsModel(pydantic.BaseModel):
     commissioning_proposal_count: int
     nsls2_data_health: bool
     lbms_data_health: bool
-    nsls2_proposals_per_cycle: Optional[list[ProposalsPerCycleModel]]
-    lbms_proposals_per_cycle: Optional[list[ProposalsPerCycleModel]]
+    nsls2_proposals_per_cycle: list[ProposalsPerCycleModel] | None
+    lbms_proposals_per_cycle: list[ProposalsPerCycleModel] | None
 
 
 class AboutModel(pydantic.BaseModel):

@@ -1,5 +1,4 @@
 import sys
-from typing import Optional
 
 import typer
 from rich import box
@@ -118,7 +117,7 @@ def show_usage_tips():
 @app.callback()
 def main(
     ctx: typer.Context,
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None,
         "--version",
         "-V",
@@ -147,7 +146,7 @@ def run():
     try:
         app()
     except Exception as e:
-        console.print(f"[error]Error: {str(e)}")
+        console.print(f"[error]Error: {e!s}")
         sys.exit(1)
 
 
