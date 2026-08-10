@@ -20,7 +20,7 @@ jobs:
           - "3.13"
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -31,7 +31,7 @@ jobs:
           sudo apt-get -y install libkrb5-dev
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
