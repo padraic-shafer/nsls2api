@@ -73,25 +73,26 @@ async def get_person_by_department(department_code: str = "PS"):
 
 
 # TODO: Add back into schema if we decide to use this endpoint.
-@router.get("/person/me",include_in_schema=True)
+@router.get("/person/me", include_in_schema=True)
 async def get_myself(upn: str = Header(...)):
-    #upn: User principal name
+    # upn: User principal name
     if not upn:
-        raise HTTPException(status_code=400, detail = "upn not found")
+        raise HTTPException(status_code=400, detail="upn not found")
     settings = get_settings()
-    ldap_info = await asyncio.to_thread(get_user_info,
+    ldap_info = await asyncio.to_thread(
+        get_user_info,
         upn,
         settings.ldap_server,
         settings.ldap_base_dn,
         settings.ldap_bind_user,
-        settings.ldap_bind_password
+        settings.ldap_bind_password,
     )
     if not ldap_info:
         raise HTTPException(status_code=404, detail="User not found in LDAP")
-    
+
     shaped_info = shape_ldap_response(ldap_info)
     return LDAPUserResponse(**shaped_info)
-    
+
 
 @router.get("/data-session/{username}", response_model=DataSessionAccess, tags=["data"])
 @router.get(

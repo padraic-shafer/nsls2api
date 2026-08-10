@@ -16,7 +16,7 @@ from nsls2api.api.models.proposal_model import (
     ProposalDiagnostics,
     ProposalFullDetails,
     ProposalsToChangeList,
-    ProposalIdDataSession
+    ProposalIdDataSession,
 )
 from nsls2api.infrastructure.logging import logger
 from nsls2api.models.cycles import Cycle
@@ -350,12 +350,10 @@ async def fetch_proposals(
     page_size: int = 10,
     page: int = 1,
     include_directories: bool = False,
-
 ) -> Optional[list[ProposalFullDetails]]:
     query = []
     saf_status_upper: list[str] = []
 
-    
     if beamline:
         beamline_upper = [beamline_name.upper() for beamline_name in beamline]
         query.append(In(Proposal.instruments, beamline_upper))
@@ -365,7 +363,7 @@ async def fetch_proposals(
 
     if proposal_id:
         query.append(In(Proposal.proposal_id, proposal_id))
-        
+
     if username is not None:
         username = username.strip()
     if username:
@@ -373,16 +371,14 @@ async def fetch_proposals(
 
     if saf_status:
         saf_status_upper = [
-            stripped.upper()
-            for s in saf_status
-            if (stripped := s.strip())
+            stripped.upper() for s in saf_status if (stripped := s.strip())
         ]
         query.append(
             ElemMatch(
                 Proposal.safs,
                 {
                     "status": {"$in": saf_status_upper},
-                }
+                },
             )
         )
 
@@ -408,9 +404,7 @@ async def fetch_proposals(
         filtered_proposals = []
         for proposal in proposals:
             proposal.safs = [
-                saf
-                for saf in (proposal.safs or [])
-                if saf.status in saf_status_upper
+                saf for saf in (proposal.safs or []) if saf.status in saf_status_upper
             ]
             if proposal.safs:
                 filtered_proposals.append(proposal)
@@ -428,6 +422,7 @@ async def fetch_proposals(
         return detailed_proposals
     else:
         return proposals
+
 
 async def fetch_data_sessions(
     proposal_id: list[str] | None = None,
@@ -456,10 +451,7 @@ async def fetch_data_sessions(
     filter_query = And(*query) if query else {}
 
     proposals = (
-        await Proposal.find_many(
-            filter_query,
-            projection_model=ProposalIdDataSession
-        )
+        await Proposal.find_many(filter_query, projection_model=ProposalIdDataSession)
         .sort(-Proposal.last_updated)
         .limit(page_size)
         .skip(page_size * (page - 1))
@@ -467,6 +459,7 @@ async def fetch_data_sessions(
     )
 
     return proposals
+
 
 async def proposal_type_description_from_pass_type_id(
     pass_type_id: int,

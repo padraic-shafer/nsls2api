@@ -71,8 +71,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    #Whoami LDAP settings
-    ldap_server: str = Field(default="ldaps://ldapproxy.nsls2.bnl.gov", alias="LDAP_SERVER")
+    # Whoami LDAP settings
+    ldap_server: str = Field(
+        default="ldaps://ldapproxy.nsls2.bnl.gov", alias="LDAP_SERVER"
+    )
     ldap_base_dn: str = Field(default="dc=bnl,dc=gov", alias="LDAP_BASE_DN")
     ldap_bind_user: str = Field(default="", alias="LDAP_BIND_USER")
     ldap_bind_password: str = Field(default="", alias="LDAP_BIND_PASSWORD")

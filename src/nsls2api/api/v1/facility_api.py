@@ -3,16 +3,20 @@ from fastapi import Depends
 
 from nsls2api.api.models.facility_model import (
     FacilityCurrentOperatingCycleResponseModel,
-    FacilityCycleDetailsResponseModel, FacilityCyclesResponseModel,
-    FacilityName)
+    FacilityCycleDetailsResponseModel,
+    FacilityCyclesResponseModel,
+    FacilityName,
+)
 from nsls2api.api.models.proposal_model import CycleProposalList
 from nsls2api.infrastructure.logging import logger
 from nsls2api.infrastructure.security import validate_admin_role
 from nsls2api.services import facility_service, proposal_service
-from nsls2api.services.facility_service import (CycleNotFoundError,
-                                                CycleOperationError,
-                                                CycleUpdateError,
-                                                CycleVerificationError)
+from nsls2api.services.facility_service import (
+    CycleNotFoundError,
+    CycleOperationError,
+    CycleUpdateError,
+    CycleVerificationError,
+)
 
 router = fastapi.APIRouter()
 

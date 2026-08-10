@@ -159,6 +159,7 @@ class ProposalIdDataSession(pydantic.BaseModel):
     proposal_id: str
     data_session: str | None = None
 
+
 class ProposalIdDataSessionList(pydantic.BaseModel):
     proposals: list[ProposalIdDataSession]
     count: int
