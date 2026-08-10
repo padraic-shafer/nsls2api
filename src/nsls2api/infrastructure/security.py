@@ -2,7 +2,6 @@ import calendar
 import datetime
 import enum
 import secrets
-from typing import Optional
 
 from beanie import Link, WriteRules
 from fastapi import Depends, HTTPException, Request, Security, status
@@ -115,7 +114,7 @@ async def lookup_api_key(token: str) -> ApiKey:
     return apikey
 
 
-async def verify_api_key(token: str) -> Optional[ApiKey]:
+async def verify_api_key(token: str) -> ApiKey | None:
     """
     Verifies the validity of an API key.
 
@@ -165,7 +164,7 @@ async def validate_admin_role(
     request: Request,
     api_key: str = Depends(get_api_key),
     settings: BaseSettings = Depends(get_settings),
-) -> Optional[Link[ApiUser]]:
+) -> Link[ApiUser] | None:
     if api_key is not None:
         try:
             valid_key = await verify_api_key(api_key)
@@ -230,8 +229,7 @@ def default_apikey_expiration(months: int = 6) -> datetime.date:
     # Calculate the day
     day = date_now.day
     last_day_of_month = calendar.monthrange(year, month)[1]
-    if day > last_day_of_month:
-        day = last_day_of_month
+    day = min(day, last_day_of_month)
 
     new_date = datetime.date(year, month, day)
     return new_date

@@ -1,4 +1,3 @@
-from typing import List, Optional
 
 from nsls2api.api.models.person_model import BNLPerson
 from nsls2api.infrastructure.logging import logger
@@ -20,7 +19,7 @@ async def get_all_people():
     return people
 
 
-async def get_person_by_username(username: str) -> Optional[BNLPerson]:
+async def get_person_by_username(username: str) -> BNLPerson | None:
     url = f"{base_url}/api/BNLPeople?accountName={username}"
     person = await _call_bnlpeople_webservice(url)
     if len(person) == 0 or len(person) > 1:
@@ -30,7 +29,7 @@ async def get_person_by_username(username: str) -> Optional[BNLPerson]:
     return BNLPerson(**person[0])
 
 
-async def get_username_by_id(lifenumber: str) -> Optional[str]:
+async def get_username_by_id(lifenumber: str) -> str | None:
     if lifenumber is None:
         return None
 
@@ -59,7 +58,7 @@ async def get_username_by_id(lifenumber: str) -> Optional[str]:
         return None
 
 
-async def get_person_by_id(lifenumber: str) -> Optional[BNLPerson]:
+async def get_person_by_id(lifenumber: str) -> BNLPerson | None:
     if lifenumber is None:
         return None
 
@@ -73,7 +72,7 @@ async def get_person_by_id(lifenumber: str) -> Optional[BNLPerson]:
     return BNLPerson(**person[0])
 
 
-async def get_person_by_email(email: str) -> Optional[BNLPerson]:
+async def get_person_by_email(email: str) -> BNLPerson | None:
     url = f"{base_url}/api/BNLPeople?email={email}"
     person = await _call_bnlpeople_webservice(url)
     if len(person) == 0 or len(person) > 1:
@@ -85,7 +84,7 @@ async def get_person_by_email(email: str) -> Optional[BNLPerson]:
 
 async def get_people_by_department(
     department_code: str,
-) -> Optional[List[BNLPerson]]:
+) -> list[BNLPerson] | None:
     url = f"{base_url}/api/BNLPeople?departmentCode={department_code}"
     people = await _call_bnlpeople_webservice(url)
     if len(people) == 0:

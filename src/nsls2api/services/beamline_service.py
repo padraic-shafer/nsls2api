@@ -1,6 +1,5 @@
 import datetime
 from pathlib import Path
-from typing import Optional
 
 from beanie.odm.operators.find.array import ElemMatch
 from beanie.odm.operators.find.comparison import In
@@ -36,7 +35,7 @@ async def beamline_count() -> int:
     return await Beamline.count()
 
 
-async def beamline_by_name(name: str) -> Optional[Beamline]:
+async def beamline_by_name(name: str) -> Beamline | None:
     """
     Find and return a beamline by its name.
 
@@ -58,7 +57,7 @@ async def all_beamlines() -> list[Beamline]:
     return beamlines
 
 
-async def beamline_by_pass_id(pass_id: str) -> Optional[Beamline]:
+async def beamline_by_pass_id(pass_id: str) -> Beamline | None:
     """
     Find and return a beamline by its PASS ID.
 
@@ -69,7 +68,7 @@ async def beamline_by_pass_id(pass_id: str) -> Optional[Beamline]:
     return beamline
 
 
-async def all_services(name: str) -> Optional[ServicesOnly]:
+async def all_services(name: str) -> ServicesOnly | None:
     beamline_services = await Beamline.find_one(Beamline.name == name.upper()).project(
         ServicesOnly
     )
@@ -77,7 +76,9 @@ async def all_services(name: str) -> Optional[ServicesOnly]:
 
 
 async def detectors(name: str) -> list[Detector]:
-    beamline_detectors = await Beamline.find_one(Beamline.name == name.upper()).project(
+    beamline_detectors = await Beamline.find_one(
+        Beamline.name == name.upper()
+    ).project(
         DetectorView
     )
     if beamline_detectors is None:
@@ -92,7 +93,7 @@ async def add_detector(
     granularity: DirectoryGranularity,
     description: str,
     manufacturer: str,
-) -> Optional[Detector]:
+) -> Detector | None:
     """
     Add a new detector to a beamline.
 
@@ -142,7 +143,7 @@ async def add_detector(
 async def delete_detector(
     beamline_name: str,
     detector_name: str,
-) -> Optional[Detector]:
+) -> Detector | None:
     """
     Delete a detector from a beamline.
 
@@ -181,7 +182,7 @@ async def delete_detector(
     return deleted_detector
 
 
-async def service_accounts(name: str) -> Optional[ServiceAccounts]:
+async def service_accounts(name: str) -> ServiceAccounts | None:
     accounts = await Beamline.find_one(Beamline.name == name.upper()).project(
         ServiceAccountsView
     )
@@ -265,7 +266,7 @@ async def epics_services_username(name: str) -> str:
     return epics_services_account.username
 
 
-async def lsdc_username(name: str) -> Optional[str]:
+async def lsdc_username(name: str) -> str | None:
     lsdc_account = await Beamline.find_one(Beamline.name == name.upper()).project(
         LsdcServiceAccountView
     )
@@ -276,7 +277,7 @@ async def lsdc_username(name: str) -> Optional[str]:
     return lsdc_account.username
 
 
-async def data_roles_by_user(username: str) -> Optional[list[str]]:
+async def data_roles_by_user(username: str) -> list[str] | None:
     beamlines = await Beamline.find(In(Beamline.data_admins, [username])).to_list()
     beamline_names = [b.name.lower() for b in beamlines if b.name is not None]
     return beamline_names
@@ -447,7 +448,7 @@ async def uses_synchweb(beamline_name: str) -> bool:
         return False
 
 
-async def slack_channel_managers(beamline_name: str) -> Optional[list[str]]:
+async def slack_channel_managers(beamline_name: str) -> list[str] | None:
     """
     Retrieves the Slack user IDs of the channel managers for a given beamline.
 
@@ -467,7 +468,7 @@ async def slack_channel_managers(beamline_name: str) -> Optional[list[str]]:
     return beamline.slack_channel_managers
 
 
-async def slack_beamline_bot_user_id(beamline_name: str) -> Optional[str]:
+async def slack_beamline_bot_user_id(beamline_name: str) -> str | None:
     """
     Retrieves the Slack user ID of the beamline bot for a given beamline.
 

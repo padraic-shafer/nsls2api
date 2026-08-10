@@ -2,8 +2,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from nsls2api.main import app
-
-from nsls2api.models.proposals import Proposal, User, SafetyForm
+from nsls2api.models.proposals import Proposal, SafetyForm, User
 from nsls2api.services import proposal_service
 
 test_proposal_id = "314159"

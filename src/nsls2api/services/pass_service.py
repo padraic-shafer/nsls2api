@@ -1,4 +1,3 @@
-from typing import Optional
 
 from pydantic import ValidationError
 
@@ -36,7 +35,7 @@ async def _call_pass_webservice(url: str):
 
 async def get_proposal(
     proposal_id: str, facility: FacilityName = FacilityName.nsls2
-) -> Optional[PassProposal]:
+) -> PassProposal | None:
     pass_facility = await facility_service.pass_id_for_facility(facility)
 
     if not pass_facility:
@@ -65,7 +64,7 @@ async def get_proposal(
 
 async def get_proposal_types(
     facility: FacilityName = FacilityName.nsls2,
-) -> Optional[list[PassProposalType]]:
+) -> list[PassProposalType] | None:
     pass_facility = await facility_service.pass_id_for_facility(facility)
 
     if not pass_facility:
@@ -95,7 +94,7 @@ async def get_proposal_types(
 
 async def get_commissioning_proposal_type(
     facility: FacilityName = FacilityName.nsls2,
-) -> Optional[ProposalType]:
+) -> ProposalType | None:
     match facility:
         case FacilityName.nsls2:
             # The PASS ID for NSLS-II commissioning proposals is 300005
@@ -124,7 +123,7 @@ async def get_all_commissioning_proposal_type_ids() -> list[str]:
 
 async def get_saf_from_proposal(
     proposal_id: str, facility: FacilityName = FacilityName.nsls2
-) -> Optional[list[PassSaf]]:
+) -> list[PassSaf] | None:
     pass_facility = await facility_service.pass_id_for_facility(facility)
 
     if not pass_facility:
@@ -155,7 +154,7 @@ async def get_saf_from_proposal(
 
 async def get_commissioning_proposals_by_year(
     year: str, facility_name: FacilityName = FacilityName.nsls2
-) -> Optional[list[PassProposal]]:
+) -> list[PassProposal] | None:
     pass_facility = await facility_service.pass_id_for_facility(facility_name)
     if not pass_facility:
         error_message: str = f"Facility {facility_name} does not have a PASS ID."
@@ -173,11 +172,11 @@ async def get_commissioning_proposals_by_year(
                     PassProposal(**commissioning_proposal)
                 )
     except ValidationError as error:
-        error_message = f"Error validating commissioning proposal data received from PASS for year {str(year)} at {facility_name} facility."
+        error_message = f"Error validating commissioning proposal data received from PASS for year {year!s} at {facility_name} facility."
         logger.error(error_message)
         raise PassException(error_message) from error
     except Exception as error:
-        error_message = f"Error retrieving commissioning proposal information from PASS for year {str(year)} at {facility_name} facility."
+        error_message = f"Error retrieving commissioning proposal information from PASS for year {year!s} at {facility_name} facility."
         logger.exception(error_message)
         raise PassException(error_message) from error
 
@@ -192,7 +191,7 @@ async def get_pass_resources():
 
 async def get_cycles(
     facility: FacilityName = FacilityName.nsls2,
-) -> Optional[list[PassCycle]]:
+) -> list[PassCycle] | None:
     pass_facility = await facility_service.pass_id_for_facility(facility)
 
     if not pass_facility:
@@ -223,7 +222,7 @@ async def get_cycles(
 
 async def get_proposals_allocated_by_cycle(
     cycle_name: str, facility: FacilityName = FacilityName.nsls2
-) -> Optional[list[PassAllocation]]:
+) -> list[PassAllocation] | None:
     pass_facility = await facility_service.pass_id_for_facility(facility)
     if not pass_facility:
         error_message: str = f"Facility {facility} does not have a PASS ID."
@@ -258,7 +257,7 @@ async def get_proposals_allocated_by_cycle(
 
 async def get_proposals_allocated(
     facility: FacilityName = FacilityName.nsls2,
-) -> Optional[list[PassAllocation]]:
+) -> list[PassAllocation] | None:
     pass_facility = await facility_service.pass_id_for_facility(facility)
 
     if not pass_facility:

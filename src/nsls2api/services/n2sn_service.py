@@ -1,4 +1,3 @@
-from typing import Optional
 
 from N2SNUserTools.ldap import ADObjects
 
@@ -12,7 +11,7 @@ from nsls2api.infrastructure.logging import logger
 settings = get_settings()
 
 
-async def get_groups_by_username(username: str) -> Optional[ActiveDirectoryUserGroups]:
+async def get_groups_by_username(username: str) -> ActiveDirectoryUserGroups | None:
     """
     :param username: The username for which you want to retrieve the groups.
     :return: An instance of ActiveDirectoryUserGroups that contains information about the groups the user belongs to. Returns None if the user is not found or if there are multiple users with the same username.
@@ -31,7 +30,7 @@ async def get_groups_by_username(username: str) -> Optional[ActiveDirectoryUserG
     return ActiveDirectoryUserGroups(**user_details[0])
 
 
-async def get_user_by_username(username: str) -> Optional[ActiveDirectoryUser]:
+async def get_user_by_username(username: str) -> ActiveDirectoryUser | None:
     """
     Get a user by their username.
 
@@ -55,7 +54,7 @@ async def get_user_by_username(username: str) -> Optional[ActiveDirectoryUser]:
     return ActiveDirectoryUser(**user_details[0])
 
 
-async def get_user_by_id(bnl_id: str) -> Optional[ActiveDirectoryUser]:
+async def get_user_by_id(bnl_id: str) -> ActiveDirectoryUser | None:
     """
     :param bnl_id: The BNL ID of the user to retrieve
     :return: An ActiveDirectoryUser object representing the user's details
@@ -74,7 +73,7 @@ async def get_user_by_id(bnl_id: str) -> Optional[ActiveDirectoryUser]:
     return ActiveDirectoryUser(**user_details[0])
 
 
-async def get_username_by_id(bnl_id: str) -> Optional[str]:
+async def get_username_by_id(bnl_id: str) -> str | None:
     ad_user: ActiveDirectoryUser = await get_user_by_id(bnl_id)
     if ad_user is None:
         return None

@@ -2,7 +2,7 @@ import configparser
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class ApiEnvironment(str, Enum):
@@ -36,7 +36,7 @@ class Config:
         return config
 
     @classmethod
-    def get_value(cls, section: str, key: str) -> Optional[str]:
+    def get_value(cls, section: str, key: str) -> str | None:
         """Get a value from the configuration"""
         try:
             config = cls.read()
@@ -86,7 +86,7 @@ def get_base_url() -> str:
     return url if url else ApiEnvironment.PRODUCTION.value
 
 
-def get_token() -> Optional[str]:
+def get_token() -> str | None:
     """Get the API token"""
     return Config.get_value("api", ConfigKey.TOKEN)
 
@@ -103,5 +103,4 @@ def remove_token() -> None:
 
 class ConfigError(Exception):
     """Configuration related errors"""
-
-    pass
+    # No additional methods or attributes are needed for this class.

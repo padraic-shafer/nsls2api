@@ -1,7 +1,6 @@
 import datetime
 import random
 from pathlib import Path
-from typing import Optional
 
 from beanie.odm.operators.find.array import ElemMatch
 from beanie.operators import And, In, Or, RegEx, Text
@@ -15,8 +14,8 @@ from nsls2api.api.models.proposal_model import (
     ProposalChangeResultsList,
     ProposalDiagnostics,
     ProposalFullDetails,
-    ProposalsToChangeList,
     ProposalIdDataSession,
+    ProposalsToChangeList,
 )
 from nsls2api.infrastructure.logging import logger
 from nsls2api.models.cycles import Cycle
@@ -206,7 +205,7 @@ def generate_data_session_for_proposal(proposal_id: str) -> str:
     Returns:
         str: The generated data session name.
     """
-    return f"pass-{str(proposal_id)}"
+    return f"pass-{proposal_id!s}"
 
 
 async def get_beamline_specific_slack_channel_for_proposal(
@@ -310,7 +309,7 @@ async def proposal_by_saf_id(saf_id: str) -> Proposal:
 
 
 # Get a list of proposals that match the search criteria
-async def search_proposals(search_text: str) -> Optional[list[Proposal]]:
+async def search_proposals(search_text: str) -> list[Proposal] | None:
     query = Text(search=search_text, case_sensitive=False)
 
     if len(search_text) < 3:
@@ -350,7 +349,7 @@ async def fetch_proposals(
     page_size: int = 10,
     page: int = 1,
     include_directories: bool = False,
-) -> Optional[list[ProposalFullDetails]]:
+) -> list[ProposalFullDetails] | None:
     query = []
     saf_status_upper: list[str] = []
 
@@ -463,7 +462,7 @@ async def fetch_data_sessions(
 
 async def proposal_type_description_from_pass_type_id(
     pass_type_id: int,
-) -> Optional[str]:
+) -> str | None:
     proposal_type = await ProposalType.find_one(
         ProposalType.pass_id == str(pass_type_id)
     )
@@ -475,27 +474,27 @@ async def proposal_type_description_from_pass_type_id(
         return proposal_type.description
 
 
-async def data_session_for_proposal(proposal_id: str) -> Optional[str]:
+async def data_session_for_proposal(proposal_id: str) -> str | None:
     proposal = await Proposal.find_one(Proposal.proposal_id == str(proposal_id))
     return proposal.data_session
 
 
-async def beamlines_for_proposal(proposal_id: str) -> Optional[list[str]]:
+async def beamlines_for_proposal(proposal_id: str) -> list[str] | None:
     proposal = await proposal_by_id(proposal_id)
     return proposal.instruments
 
 
-async def cycles_for_proposal(proposal_id: str) -> Optional[list[str]]:
+async def cycles_for_proposal(proposal_id: str) -> list[str] | None:
     proposal = await proposal_by_id(proposal_id)
     return proposal.cycles
 
 
-async def slack_channels_for_proposal(proposal_id: str) -> Optional[list[SlackChannel]]:
+async def slack_channels_for_proposal(proposal_id: str) -> list[SlackChannel] | None:
     proposal = await proposal_by_id(proposal_id)
     return proposal.slack_channels
 
 
-async def fetch_users_on_proposal(proposal_id: str) -> Optional[list[User]]:
+async def fetch_users_on_proposal(proposal_id: str) -> list[User] | None:
     """
     Fetches the users associated with a given proposal.
 
@@ -511,7 +510,7 @@ async def fetch_users_on_proposal(proposal_id: str) -> Optional[list[User]]:
 
 async def fetch_usernames_from_proposal(
     proposal_id: str,
-) -> Optional[list[str]]:
+) -> list[str] | None:
     proposal = await proposal_by_id(proposal_id)
 
     if proposal is None:
@@ -523,7 +522,7 @@ async def fetch_usernames_from_proposal(
 
 async def fetch_emails_from_proposal(
     proposal_id: str,
-) -> Optional[list[str]]:
+) -> list[str] | None:
     proposal = await proposal_by_id(proposal_id)
 
     if proposal is None:
@@ -533,7 +532,7 @@ async def fetch_emails_from_proposal(
     return emails
 
 
-async def safs_from_proposal(proposal_id: str) -> Optional[list[str]]:
+async def safs_from_proposal(proposal_id: str) -> list[str] | None:
     proposal = await proposal_by_id(proposal_id)
 
     safs = [s.saf_id for s in proposal.safs if s.saf_id is not None]
@@ -541,7 +540,7 @@ async def safs_from_proposal(proposal_id: str) -> Optional[list[str]]:
     return safs
 
 
-async def pi_from_proposal(proposal_id: str) -> Optional[list[User]]:
+async def pi_from_proposal(proposal_id: str) -> list[User] | None:
     proposal = await proposal_by_id(proposal_id)
 
     pi = [u for u in proposal.users if u.is_pi]
@@ -637,19 +636,19 @@ async def directories(proposal_id: str):
 
     if proposal.data_session is None:
         error_text = (
-            f"Proposal {str(proposal.proposal_id)} does not contain a data_session."
+            f"Proposal {proposal.proposal_id!s} does not contain a data_session."
         )
         logger.error(error_text)
         error_msg.append(error_text)
 
     if not await has_valid_cycle(proposal) and not await is_commissioning(proposal):
-        error_text = f"Proposal {str(proposal.proposal_id)} does not contain any cycle information."
+        error_text = f"Proposal {proposal.proposal_id!s} does not contain any cycle information."
         logger.error(error_text)
         error_msg.append(error_text)
 
     if len(proposal.instruments) == 0:
         error_text = (
-            f"Proposal {str(proposal.proposal_id)} does not contain any beamlines."
+            f"Proposal {proposal.proposal_id!s} does not contain any beamlines."
         )
         logger.error(error_text)
         error_msg.append(error_text)
@@ -712,7 +711,7 @@ async def directories(proposal_id: str):
     return directory_list
 
 
-async def diagnostic_details_by_id(proposal_id: str) -> Optional[ProposalDiagnostics]:
+async def diagnostic_details_by_id(proposal_id: str) -> ProposalDiagnostics | None:
     proposal = await proposal_by_id(proposal_id)
 
     if proposal is None:
@@ -748,7 +747,7 @@ async def generate_fake_proposal_id() -> int:
 
 async def generate_fake_test_proposal(
     facility_name: FacilityName = FacilityName.nsls2, add_specific_user=None
-) -> Optional[Proposal]:
+) -> Proposal | None:
     """
     Generates a fake test proposal.
 

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -155,7 +154,7 @@ def get_bot_details() -> SlackBot:
     )
 
 
-def get_user_info(user_id: str) -> Optional[SlackUser]:
+def get_user_info(user_id: str) -> SlackUser | None:
     """
     Retrieves the details of a Slack User.
 
@@ -369,7 +368,7 @@ def lookup_user_by_email(email: str) -> SlackPerson | None:
     return None
 
 
-def get_userid_by_username(username: str) -> Optional[str]:
+def get_userid_by_username(username: str) -> str | None:
     """
     Looks up the slack user_id associated with the given username.
 
@@ -404,7 +403,7 @@ def get_userid_by_username(username: str) -> Optional[str]:
     return None  # Not found
 
 
-def invite_newuser_to_channel(channel: str, email: str) -> Optional[SlackPerson]:
+def invite_newuser_to_channel(channel: str, email: str) -> SlackPerson | None:
     """
     Invites a user to the workspace/channel.
     Args:

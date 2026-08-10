@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional
 
 import pydantic
 
@@ -11,7 +10,7 @@ from nsls2api.models.proposals import Proposal, User
 class UsernamesList(pydantic.BaseModel):
     usernames: list[str]
     groupname: str
-    proposal_id: Optional[str]
+    proposal_id: str | None
     count: int
 
     model_config = {
@@ -52,7 +51,7 @@ class RecentProposal(pydantic.BaseModel):
     proposal_id: str
     title: str
     updated: datetime.datetime
-    instruments: Optional[list[str]]
+    instruments: list[str] | None
 
 
 class RecentProposalsList(pydantic.BaseModel):
@@ -134,21 +133,21 @@ class ProposalFullDetailsList(pydantic.BaseModel):
 
 class ProposalDiagnostics(pydantic.BaseModel):
     proposal_id: str
-    proposal_type: Optional[str]
-    pi: Optional[User]
-    users: Optional[list[User]]
+    proposal_type: str | None
+    pi: User | None
+    users: list[User] | None
     title: str
-    data_session: Optional[str]
-    beamlines: Optional[list[str]]
-    cycles: Optional[list[str]]
-    safs: Optional[list[str]]
+    data_session: str | None
+    beamlines: list[str] | None
+    cycles: list[str] | None
+    safs: list[str] | None
     updated: datetime.datetime
 
 
 class ProposalChangeResultsList(pydantic.BaseModel):
     successful_count: int
-    successful_proposals: Optional[list[str]]
-    failed_proposals: Optional[list[str]]
+    successful_proposals: list[str] | None
+    failed_proposals: list[str] | None
 
 
 class ProposalsToChangeList(pydantic.BaseModel):

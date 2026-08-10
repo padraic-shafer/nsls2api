@@ -1,4 +1,3 @@
-from typing import Optional
 
 from starlette.requests import Request
 
@@ -12,7 +11,7 @@ class DetailsViewModel(ViewModelBase):
         super().__init__(request)
 
         self.proposal_id = proposal_id
-        self.proposal: Optional[Proposal] = None
+        self.proposal: Proposal | None = None
 
     async def load(self):
         self.proposal = await proposal_service.proposal_by_id(self.proposal_id)

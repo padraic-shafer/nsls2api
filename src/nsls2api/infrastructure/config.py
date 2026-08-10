@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     ldap_bind_password: str = Field(default="", alias="LDAP_BIND_PASSWORD")
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Retrieve the settings dictionary.
@@ -88,7 +88,7 @@ def get_settings() -> Settings:
     :returns: The dictionary of current settings.
     """
 
-    logger.info(f"Settings file: {str(Path(__file__).parent.parent / '.env')}")
+    logger.info(f"Settings file: {Path(__file__).parent.parent / '.env'!s}")
 
     if os.environ.get("PYTEST_VERSION") is not None:
         PROJ_SRC_PATH = Path(__file__).parent.parent

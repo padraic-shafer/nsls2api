@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 import fastapi
 from fastapi import Depends, HTTPException, Query
@@ -66,7 +66,7 @@ async def generate_user_apikey(username: str, usertype: ApiUserType = ApiUserTyp
 @router.post("/admin/proposal/generate-test")
 async def generate_fake_proposal(
     add_specific_user: str | None = None,
-) -> Optional[SingleProposal]:
+) -> SingleProposal | None:
     proposal = await proposal_service.generate_fake_test_proposal(
         FacilityName.nsls2, add_specific_user
     )
@@ -97,7 +97,7 @@ async def update_user_role(username: str, role: ApiUserRole) -> ApiUserResponseM
         )
 
     user.role = role
-    await user.save()  # noqa
+    await user.save()
 
     response = ApiUserResponseModel(
         id=user.id,

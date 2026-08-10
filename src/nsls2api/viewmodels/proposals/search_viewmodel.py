@@ -1,4 +1,3 @@
-from typing import Optional
 
 from fastapi import Request
 
@@ -11,7 +10,7 @@ class SearchViewModel(ViewModelBase):
     def __init__(self, request: Request):
         super().__init__(request)
 
-        self.proposals: Optional[list[Proposal]] = []
+        self.proposals: list[Proposal] | None = []
         self.request = request
 
         # self.search_text: str = request

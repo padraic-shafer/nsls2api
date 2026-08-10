@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import traceback
-from typing import Optional
 
 import bson
 
@@ -32,7 +31,7 @@ async def pending_jobs(limit=1_000) -> list[BackgroundJob]:
         return []
 
 
-async def start_job(job_id: bson.ObjectId) -> Optional[BackgroundJob]:
+async def start_job(job_id: bson.ObjectId) -> BackgroundJob | None:
     job = await job_by_id(job_id)
     if not job:
         raise Exception(f"No job with ID {job_id} found.")
@@ -51,7 +50,7 @@ async def start_job(job_id: bson.ObjectId) -> Optional[BackgroundJob]:
 
 async def complete_job(
     job_id: bson.ObjectId, processing_status: JobStatus, log_message: str = None
-) -> Optional[BackgroundJob]:
+) -> BackgroundJob | None:
     job = await job_by_id(job_id)
     if not job:
         raise Exception(f"No job with ID {job_id} found.")
@@ -70,12 +69,12 @@ async def complete_job(
     return job
 
 
-async def job_by_id(job_id: bson.ObjectId) -> Optional[BackgroundJob]:
+async def job_by_id(job_id: bson.ObjectId) -> BackgroundJob | None:
     return await BackgroundJob.find_one(BackgroundJob.id == job_id)
 
 
 async def is_job_finished(job_id: bson.ObjectId) -> bool:
-    job: Optional[BackgroundJob] = await job_by_id(job_id)
+    job: BackgroundJob | None = await job_by_id(job_id)
     if not job:
         return False
 

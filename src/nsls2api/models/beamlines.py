@@ -1,6 +1,5 @@
 import datetime
 from enum import StrEnum
-from typing import Optional
 
 import beanie
 import pydantic
@@ -95,10 +94,10 @@ class DetectorList(pydantic.BaseModel):
 
 class BeamlineService(pydantic.BaseModel):
     name: str
-    used_in_production: Optional[bool] = None
-    host: Optional[str] = None
-    port: Optional[int] = None
-    uri: Optional[str] = None
+    used_in_production: bool | None = None
+    host: str | None = None
+    port: int | None = None
+    uri: str | None = None
 
 
 class ServicesOnly(pydantic.BaseModel):
@@ -111,19 +110,19 @@ class ServicesOnly(pydantic.BaseModel):
 
 
 class ServiceAccounts(pydantic.BaseModel):
-    ioc: Optional[str]
-    workflow: Optional[str]
-    bluesky: Optional[str]
-    epics_services: Optional[str]
-    operator: Optional[str]
-    lsdc: Optional[str] = None
+    ioc: str | None
+    workflow: str | None
+    bluesky: str | None
+    epics_services: str | None
+    operator: str | None
+    lsdc: str | None = None
 
     class Settings:
         keep_nulls = False
 
 
 class ServiceAccountsView(pydantic.BaseModel):
-    service_accounts: Optional[ServiceAccounts]
+    service_accounts: ServiceAccounts | None
 
 
 class WorkflowServiceAccountView(pydantic.BaseModel):
@@ -176,7 +175,7 @@ class BeamlineServicesSynchwebView(pydantic.BaseModel):
 
 
 class DataRootDirectoryView(pydantic.BaseModel):
-    data_root: Optional[str] = None
+    data_root: str | None = None
 
     class Settings:
         projection = {"data_root": "$custom_root_directory"}
@@ -190,7 +189,7 @@ class SlackChannelManagersView(pydantic.BaseModel):
 
 
 class SlackBeamlineBotUserIdView(pydantic.BaseModel):
-    slack_beamline_bot_user_id: Optional[str] = None
+    slack_beamline_bot_user_id: str | None = None
 
     class Settings:
         projection = {"slack_beamline_bot_user_id": "$slack_beamline_bot_user_id"}
@@ -198,29 +197,29 @@ class SlackBeamlineBotUserIdView(pydantic.BaseModel):
 
 class EndStation(pydantic.BaseModel):
     name: str
-    service_accounts: Optional[ServiceAccounts] = None
+    service_accounts: ServiceAccounts | None = None
 
 
 class Beamline(beanie.Document):
     name: str
-    long_name: Optional[str]
-    alternative_name: Optional[str]
+    long_name: str | None
+    alternative_name: str | None
     port: str
-    network_locations: Optional[list[str]] = []
-    pass_name: Optional[str]
-    pass_id: Optional[str]
-    nsls2_redhat_satellite_location_name: Optional[list[str]] = []
+    network_locations: list[str] | None = []
+    pass_name: str | None
+    pass_id: str | None
+    nsls2_redhat_satellite_location_name: list[str] | None = []
     service_accounts: ServiceAccounts | None = None
-    endstations: Optional[list[EndStation]] = []
-    slack_channel_managers: Optional[list[str]] = []
-    slack_beamline_bot_user_id: Optional[str] = None
-    slack_autocreate_channels: Optional[bool] = False
-    data_admins: Optional[list[str]] = []
-    custom_data_admin_group: Optional[str] = None
-    github_org: Optional[str] = None
-    data_root: Optional[str] = None
-    services: Optional[list[BeamlineService]] = []
-    detectors: Optional[list[Detector]] = []
+    endstations: list[EndStation] | None = []
+    slack_channel_managers: list[str] | None = []
+    slack_beamline_bot_user_id: str | None = None
+    slack_autocreate_channels: bool | None = False
+    data_admins: list[str] | None = []
+    custom_data_admin_group: str | None = None
+    github_org: str | None = None
+    data_root: str | None = None
+    services: list[BeamlineService] | None = []
+    detectors: list[Detector] | None = []
     created_on: datetime.datetime = pydantic.Field(
         default_factory=datetime.datetime.now
     )
