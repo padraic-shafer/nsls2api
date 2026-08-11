@@ -26,6 +26,7 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '21'
+        settings-path: ${{ github.workspace }}  # Create settings.xml here
 
     - name: Download ijhttp.zip
       run: curl -f -L -o ijhttp.zip "https://jb.gg/ijhttp/latest"
