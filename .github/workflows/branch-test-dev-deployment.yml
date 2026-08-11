@@ -1,4 +1,4 @@
-name: Integration Tests for Development API
+name: Branch Integration Tests for Development API
 permissions:
   contents: read
 
@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - ci-integ-setup
 
 jobs:
   integration_tests:
