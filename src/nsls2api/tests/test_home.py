@@ -63,17 +63,16 @@ async def test_proposal_search_htmx_request():
 
 @pytest.mark.anyio
 async def test_proposal_details_page():
-    """Test that the proposal details page renders successfully.
+    """Test that the proposal details page renders successfully for the seeded proposal (314159).
     
-    Note: This test uses a dummy proposal ID. In a real integration test,
-    this would be seeded with actual proposal data from the database.
+    The conftest autouse fixture seeds this proposal ID into the test database.
+    This test verifies the TemplateResponse signature works correctly when rendering
+    proposal detail pages.
     """
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         response = await ac.get("/proposal-details/314159")
-    # Should return 200 or 404 depending on database state, but either way
-    # should render HTML (not a 500 error from TemplateResponse signature issue)
-    assert response.status_code in (200, 404)
-    if response.status_code == 200:
-        assert "text/html" in response.headers.get("content-type", "")
+    # Should return 200 since the proposal is seeded by the fixture
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
