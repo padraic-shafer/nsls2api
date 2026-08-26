@@ -16,8 +16,7 @@ router = fastapi.APIRouter(include_in_schema=False)
 
 @router.get("/", include_in_schema=False)
 def index(request: Request):
-    data = {"request": request}
-    return templates.TemplateResponse("home/index.html", data)
+    return templates.TemplateResponse(request, "home/index.html")
 
 
 # This is a test endpoint to make sure the server is running
@@ -37,10 +36,10 @@ async def search_proposals(request: Request):
     print(f"Searching for {vm.search_text}")
     if vm.is_htmx_request:
         return templates.TemplateResponse(
-            "shared/partials/proposals_search_results.html", vm.to_dict()
+            request, "shared/partials/proposals_search_results.html", vm.to_dict()
         )
 
-    return templates.TemplateResponse("home/proposals_search.html", vm.to_dict())
+    return templates.TemplateResponse(request, "home/proposals_search.html", vm.to_dict())
 
 
 @router.get("/proposal-details/{proposal_id}", include_in_schema=False)
@@ -50,7 +49,7 @@ async def proposals(proposal_id: str, request: Request):
 
     print(vm.to_dict())
 
-    return templates.TemplateResponse("home/proposals.html", vm.to_dict())
+    return templates.TemplateResponse(request, "home/proposals.html", vm.to_dict())
 
 
 @router.get("/favicon.ico", include_in_schema=False)
