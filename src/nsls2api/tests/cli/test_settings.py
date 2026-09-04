@@ -257,10 +257,21 @@ class TestMigrateLegacyConfig:
         content = "[api]\nbase_url = http://127.0.0.1:8080\ntoken = secret\n"
         legacy = _make_legacy(tmp_path, content)
 
+        # Simulate a cross-device rename failure: the migration move raises, but
+        # the restore move (second call) must succeed so recovery can complete.
+        _real_move = settings_mod.shutil.move
+        _calls = [0]
+
+        def _move_fails_once(src, dst, *args, **kwargs):
+            _calls[0] += 1
+            if _calls[0] == 1:
+                raise OSError("EXDEV")
+            return _real_move(src, dst, *args, **kwargs)
+
         with (
             _patch_home(tmp_path),
             patch.dict(os.environ, {}, clear=False),
-            patch.object(settings_mod.shutil, "move", side_effect=OSError("EXDEV")),
+            patch.object(settings_mod.shutil, "move", side_effect=_move_fails_once),
         ):
             os.environ.pop("XDG_CONFIG_HOME", None)
             result = Config.migrate_legacy_config()
@@ -356,6 +367,17 @@ class TestMigrateLegacyConfig:
         content = "[api]\nbase_url = http://127.0.0.1:8080\ntoken = secret\n"
         legacy = _make_legacy(tmp_path, content)
 
+        # Simulate a cross-device rename failure: the migration move raises, but
+        # the restore move (second call) must succeed so recovery can complete.
+        _real_move = settings_mod.shutil.move
+        _calls = [0]
+
+        def _move_fails_once(src, dst, *args, **kwargs):
+            _calls[0] += 1
+            if _calls[0] == 1:
+                raise OSError("EXDEV")
+            return _real_move(src, dst, *args, **kwargs)
+
         with (
             _patch_home(tmp_path),
             patch.dict(
@@ -363,7 +385,7 @@ class TestMigrateLegacyConfig:
                 {"XDG_CONFIG_HOME": str(dot_config)},
                 clear=False,
             ),
-            patch.object(settings_mod.shutil, "move", side_effect=OSError("EXDEV")),
+            patch.object(settings_mod.shutil, "move", side_effect=_move_fails_once),
         ):
             result = Config.migrate_legacy_config()
 
