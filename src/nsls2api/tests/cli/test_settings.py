@@ -155,7 +155,7 @@ class TestMigrateLegacyConfig:
 
     @pytest.mark.skipif(sys.platform == "win32", reason="chmod not meaningful on Windows")
     def test_warns_and_proceeds_when_not_writable(self, tmp_path: Path, capsys):
-        """Non-writable legacy file: warning is printed with two-step manual hint;
+        """Non-writable legacy file: warning is printed with platform-neutral hint;
         no exception raised; returns None."""
         legacy = _make_legacy(tmp_path)
         legacy.chmod(0o444)  # read-only
@@ -172,8 +172,8 @@ class TestMigrateLegacyConfig:
         captured = capsys.readouterr()
         assert "migration skipped" in captured.err
         assert str(legacy) in captured.err
-        # Hint must be the correct two-step sequence, not the old impossible mv.
-        assert "mkdir -p" in captured.err
+        # Hint must use platform-neutral numbered steps, not POSIX shell commands.
+        assert "Create the directory" in captured.err
         assert str(new_path.parent) in captured.err
 
     def test_migration_triggered_by_read(self, tmp_path: Path):
@@ -248,7 +248,7 @@ class TestMigrateLegacyConfig:
             result = Config.migrate_legacy_config()
 
         assert result is None
-        assert legacy.exists()          # rolled back
+        assert legacy.is_file(), "Legacy config must be a file after rollback"
         assert legacy.read_text().startswith("[api]")
         captured = capsys.readouterr()
         assert "remain at" in captured.err
@@ -320,22 +320,21 @@ class TestReadLegacyFallback:
         assert cfg.get("api", "token") == "mytoken"
 
     def test_read_falls_back_to_legacy_when_new_absent(self, tmp_path: Path):
-        """With no new config and no migration trigger, read() reads the legacy file."""
+        """When migration is suppressed and no new config exists, read() falls back
+        to the legacy file (R4 fallback path in read())."""
         _make_legacy(
             tmp_path, "[api]\nbase_url = https://api.example.com\n"
         )
-        # Do not create the new-style config at all.
-        with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
+        # Patch migrate_legacy_config to a no-op so migration never runs and the
+        # new config file is never created — this isolates the read() fallback.
+        with (
+            _patch_home(tmp_path),
+            patch.dict(os.environ, {}, clear=False),
+            patch.object(Config, "migrate_legacy_config", return_value=None),
+        ):
             os.environ.pop("XDG_CONFIG_HOME", None)
-            # Suppress migration (legacy is present but so is its path — we want
-            # to test the fallback directly, so skip the migration by marking the
-            # legacy as a dir is too invasive; instead just confirm read() returns
-            # legacy values when new is absent after a no-op migration).
             cfg = Config.read()
 
-        # Migration will have run and succeeded here (normal case), but if for any
-        # reason it didn't, the fallback should still work. Assert the value is present
-        # regardless of whether migration ran.
         assert cfg.get("api", "base_url") == "https://api.example.com"
 
     def test_read_returns_empty_config_when_both_absent(self, tmp_path: Path):

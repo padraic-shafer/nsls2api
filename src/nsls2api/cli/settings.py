@@ -80,8 +80,9 @@ class Config:
                 f"Warning: nsls2api config migration skipped — "
                 f"'{legacy}' is not writable. "
                 f"To migrate manually:\n"
-                f"  mv '{legacy}' '{legacy}.bak' && "
-                f"mkdir -p '{new.parent}' && mv '{legacy}.bak' '{new}'",
+                f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
+                f"  2. Create the directory '{new.parent}'\n"
+                f"  3. Move the saved file into place as '{new}'",
                 file=sys.stderr,
             )
             return None
@@ -105,15 +106,26 @@ class Config:
                     f"Warning: nsls2api config migration failed ({exc}). "
                     f"Your settings remain at '{legacy}'. "
                     f"To migrate manually:\n"
-                    f"  mv '{legacy}' '{legacy}.bak' && "
-                    f"mkdir -p '{new.parent}' && mv '{legacy}.bak' '{new}'",
+                    f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
+                    f"  2. Create the directory '{new.parent}'\n"
+                    f"  3. Move the saved file into place as '{new}'",
                     file=sys.stderr,
                 )
             else:
                 # Staging succeeded (tmp holds the data); a later step failed.
-                # Try to restore the legacy file so the user isn't left without config.
+                # new.parent.mkdir() may have created ~/.config/nsls2/api/ and
+                # ~/.config/nsls2/ (which occupies the legacy name as a directory).
+                # Remove those empty dirs so the legacy name is free to receive the
+                # file again.  rmtree is limited to new.parent (the api/ subtree);
+                # legacy.rmdir() only succeeds when the dir is empty — if it
+                # unexpectedly holds other content it raises and we fall through
+                # to the "settings at tmp" message, never deleting real data.
                 restored = False
                 try:
+                    if new.parent.is_dir():
+                        shutil.rmtree(new.parent, ignore_errors=True)  # …/nsls2/api
+                    if legacy.is_dir():
+                        legacy.rmdir()                                  # empty …/nsls2
                     tmp.replace(legacy)
                     restored = True
                 except OSError:
@@ -123,8 +135,9 @@ class Config:
                         f"Warning: nsls2api config migration failed ({exc}). "
                         f"Your settings remain at '{legacy}'. "
                         f"To migrate manually:\n"
-                        f"  mv '{legacy}' '{legacy}.bak' && "
-                        f"mkdir -p '{new.parent}' && mv '{legacy}.bak' '{new}'",
+                        f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
+                        f"  2. Create the directory '{new.parent}'\n"
+                        f"  3. Move the saved file into place as '{new}'",
                         file=sys.stderr,
                     )
                 else:
@@ -134,7 +147,8 @@ class Config:
                         f"could not be rolled back. "
                         f"Your settings are at '{tmp}'. "
                         f"To recover:\n"
-                        f"  mkdir -p '{new.parent}' && mv '{tmp}' '{new}'",
+                        f"  1. Create the directory '{new.parent}'\n"
+                        f"  2. Move '{tmp}' into place as '{new}'",
                         file=sys.stderr,
                     )
             return None
