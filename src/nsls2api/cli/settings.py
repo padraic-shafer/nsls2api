@@ -25,7 +25,7 @@ class Config:
 
     @staticmethod
     def get_filepath() -> Path:
-        """Get the configuration file path ($XDG_CONFIG_HOME/nsls2/api/cli.toml).
+        """Get the configuration file path ($XDG_CONFIG_HOME/nsls2/api/cli.ini).
 
         Respects XDG_CONFIG_HOME if set; falls back to ~/.config on POSIX and
         %APPDATA% on Windows.
@@ -36,7 +36,7 @@ class Config:
         else:
             xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
             base = Path(xdg) if xdg else Path.home() / ".config"
-        return base / "nsls2" / "api" / "cli.toml"
+        return base / "nsls2" / "api" / "cli.ini"
 
     @staticmethod
     def _legacy_filepath() -> Path:

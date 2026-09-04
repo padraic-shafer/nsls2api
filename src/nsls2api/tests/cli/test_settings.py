@@ -36,24 +36,24 @@ def _patch_home(tmp_path: Path):
 
 class TestGetFilepath:
     def test_default_posix_path(self, tmp_path: Path):
-        """Without XDG_CONFIG_HOME, resolves to ~/.config/nsls2/api/cli.toml."""
+        """Without XDG_CONFIG_HOME, resolves to ~/.config/nsls2/api/cli.ini."""
         with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
             os.environ.pop("XDG_CONFIG_HOME", None)
             result = Config.get_filepath()
-        assert result == tmp_path / ".config" / "nsls2" / "api" / "cli.toml"
+        assert result == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
 
     def test_respects_xdg_config_home(self, tmp_path: Path):
         """XDG_CONFIG_HOME is honoured when set."""
         xdg = str(tmp_path / "xdg")
         with _patch_home(tmp_path), patch.dict(os.environ, {"XDG_CONFIG_HOME": xdg}):
             result = Config.get_filepath()
-        assert result == tmp_path / "xdg" / "nsls2" / "api" / "cli.toml"
+        assert result == tmp_path / "xdg" / "nsls2" / "api" / "cli.ini"
 
     def test_blank_xdg_config_home_falls_back(self, tmp_path: Path):
         """A blank XDG_CONFIG_HOME is treated as unset."""
         with _patch_home(tmp_path), patch.dict(os.environ, {"XDG_CONFIG_HOME": "   "}):
             result = Config.get_filepath()
-        assert result == tmp_path / ".config" / "nsls2" / "api" / "cli.toml"
+        assert result == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class TestGetFilepath:
 
 class TestSetValueRead:
     def test_set_creates_dirs_and_file(self, tmp_path: Path):
-        """set_value creates the nsls2/api/ directory and writes cli.toml."""
+        """set_value creates the nsls2/api/ directory and writes cli.ini."""
         with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
             os.environ.pop("XDG_CONFIG_HOME", None)
             Config.set_value("api", ConfigKey.BASE_URL, "https://example.com")
@@ -100,7 +100,7 @@ class TestMigrateLegacyConfig:
         the path component that must become a directory, so staging via a temp
         file is required.  After migration:
           - ~/.config/nsls2 must be a DIRECTORY (not a file)
-          - ~/.config/nsls2/api/cli.toml must exist with original content
+          - ~/.config/nsls2/api/cli.ini must exist with original content
           - no staging temp files remain in ~/.config/
         """
         legacy = _make_legacy(tmp_path)
@@ -110,7 +110,7 @@ class TestMigrateLegacyConfig:
             new_path = Config.migrate_legacy_config()
 
         assert new_path is not None
-        assert new_path == tmp_path / ".config" / "nsls2" / "api" / "cli.toml"
+        assert new_path == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         assert new_path.exists()
         assert not legacy.exists()              # bare file is gone …
         assert legacy.is_dir()                  # … and replaced by a directory
@@ -124,7 +124,7 @@ class TestMigrateLegacyConfig:
     def test_no_op_when_new_already_exists(self, tmp_path: Path):
         """Migration is skipped when the new config file is already present."""
         legacy = _make_legacy(tmp_path)
-        new = tmp_path / ".config" / "nsls2" / "api" / "cli.toml"
+        new = tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         new.parent.mkdir(parents=True, exist_ok=True)
         new.write_text("[api]\nbase_url = https://already.here\n")
 
@@ -189,5 +189,5 @@ class TestMigrateLegacyConfig:
         assert cfg.get("api", "base_url") == "http://127.0.0.1:8080"
         assert cfg.get("api", "token") == "abc"
         assert not legacy.exists()
-        new = tmp_path / ".config" / "nsls2" / "api" / "cli.toml"
+        new = tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         assert new.exists()
