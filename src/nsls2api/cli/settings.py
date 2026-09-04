@@ -1,6 +1,7 @@
 import configparser
 import os
 import sys
+import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,11 @@ class Config:
         the new config file does not yet exist, move the legacy file to the new
         location, creating intermediate directories as needed.
 
+        Because the legacy file occupies the same name (``nsls2``) that must
+        become a *directory* for the new path, migration stages the legacy file
+        to a temporary sibling location first (via :func:`tempfile.mkstemp`) to
+        free the name before calling ``mkdir``.
+
         Returns the new path if migration occurred, ``None`` otherwise.
 
         Emits a warning to stderr and returns ``None`` (without raising) if the
@@ -72,21 +78,50 @@ class Config:
             print(
                 f"Warning: nsls2api config migration skipped — "
                 f"'{legacy}' is not writable. "
-                f"To migrate manually: mv '{legacy}' '{new}'",
+                f"To migrate manually:\n"
+                f"  mv '{legacy}' '{legacy}.bak' && "
+                f"mkdir -p '{new.parent}' && mv '{legacy}.bak' '{new}'",
                 file=sys.stderr,
             )
             return None
 
+        # Stage the legacy file to a temp sibling so the 'nsls2' name is freed
+        # before we try to create a directory with that same name.
+        fd, tmp_name = tempfile.mkstemp(dir=legacy.parent, prefix=".nsls2-migrate-")
+        os.close(fd)
+        tmp = Path(tmp_name)
         try:
-            new.parent.mkdir(parents=True, exist_ok=True)
-            legacy.replace(new)
+            legacy.replace(tmp)                             # free the 'nsls2' name
+            new.parent.mkdir(parents=True, exist_ok=True)  # 'nsls2' can now be a dir
+            tmp.replace(new)                                # move into final position
         except OSError as exc:
-            print(
-                f"Warning: nsls2api config migration failed ({exc}). "
-                f"Your settings remain at '{legacy}'. "
-                f"To migrate manually: mv '{legacy}' '{new}'",
-                file=sys.stderr,
-            )
+            # Best-effort rollback: restore config to its original location.
+            restored = False
+            if tmp.exists() and not legacy.exists():
+                try:
+                    tmp.replace(legacy)
+                    restored = True
+                except OSError:
+                    pass
+            if restored:
+                print(
+                    f"Warning: nsls2api config migration failed ({exc}). "
+                    f"Your settings remain at '{legacy}'. "
+                    f"To migrate manually:\n"
+                    f"  mv '{legacy}' '{legacy}.bak' && "
+                    f"mkdir -p '{new.parent}' && mv '{legacy}.bak' '{new}'",
+                    file=sys.stderr,
+                )
+            else:
+                # Rollback also failed — settings are at the temp path.
+                print(
+                    f"Warning: nsls2api config migration failed ({exc}) and "
+                    f"could not be rolled back. "
+                    f"Your settings are at '{tmp}'. "
+                    f"To recover:\n"
+                    f"  mkdir -p '{new.parent}' && mv '{tmp}' '{new}'",
+                    file=sys.stderr,
+                )
             return None
 
         return new
