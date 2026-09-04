@@ -89,7 +89,7 @@ class TestSetValueRead:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Only run on Windows")
 class TestGetFilepathWindows:
-    """These tests patch sys.platform and run only on Windows."""
+    """Run the Windows branch of get_filepath() on real Windows."""
 
     def test_windows_path_with_appdata(self, tmp_path: Path, monkeypatch):
         """With APPDATA set, uses %APPDATA%/nsls2/api/cli.ini."""
