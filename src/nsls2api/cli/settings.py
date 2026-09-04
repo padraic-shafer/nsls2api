@@ -91,13 +91,15 @@ class Config:
         fd, tmp_name = tempfile.mkstemp(dir=legacy.parent, prefix=".nsls2-migrate-")
         os.close(fd)
         tmp = Path(tmp_name)
+        staged = False  # True once legacy.replace(tmp) succeeds and tmp holds the data
         try:
             legacy.replace(tmp)                             # free the 'nsls2' name
+            staged = True
             new.parent.mkdir(parents=True, exist_ok=True)  # 'nsls2' can now be a dir
             shutil.move(str(tmp), str(new))                 # cross-device safe final move
         except OSError as exc:
-            if legacy.exists():
-                # Staging step failed — legacy is intact; clean up the empty temp file.
+            if not staged:
+                # Staging step failed — legacy is still intact; discard empty temp file.
                 tmp.unlink(missing_ok=True)
                 print(
                     f"Warning: nsls2api config migration failed ({exc}). "
@@ -108,7 +110,8 @@ class Config:
                     file=sys.stderr,
                 )
             else:
-                # Staging succeeded but a later step failed. Try to restore legacy.
+                # Staging succeeded (tmp holds the data); a later step failed.
+                # Try to restore the legacy file so the user isn't left without config.
                 restored = False
                 try:
                     tmp.replace(legacy)

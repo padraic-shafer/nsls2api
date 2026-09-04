@@ -6,7 +6,7 @@ import configparser
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -112,8 +112,7 @@ class TestMigrateLegacyConfig:
         assert new_path is not None
         assert new_path == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         assert new_path.exists()
-        assert not legacy.exists()              # bare file is gone …
-        assert legacy.is_dir()                  # … and replaced by a directory
+        assert legacy.is_dir()                  # bare file replaced by a directory
         content = new_path.read_text()
         assert "base_url" in content
         assert "127.0.0.1:8080" in content
@@ -188,7 +187,7 @@ class TestMigrateLegacyConfig:
 
         assert cfg.get("api", "base_url") == "http://127.0.0.1:8080"
         assert cfg.get("api", "token") == "abc"
-        assert not legacy.exists()
+        assert legacy.is_dir()                  # bare file replaced by a directory
         new = tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         assert new.exists()
 
@@ -253,6 +252,43 @@ class TestMigrateLegacyConfig:
         assert legacy.read_text().startswith("[api]")
         captured = capsys.readouterr()
         assert "remain at" in captured.err
+
+    def test_shutil_move_failure_after_mkdir_does_not_lose_data(
+        self, tmp_path: Path, capsys
+    ):
+        """Regression: when shutil.move fails AFTER mkdir has created the nsls2/
+        directory, the old legacy.exists() check would see the newly-created dir
+        and delete the temp file (the only copy of user settings) — data loss.
+
+        With the staged-flag fix, the code correctly identifies that staging
+        succeeded (tmp holds the data) and attempts rollback regardless of whether
+        legacy.exists() is True or False.
+        """
+        import nsls2api.cli.settings as settings_mod
+
+        content = "[api]\nbase_url = http://127.0.0.1:8080\ntoken = secret\n"
+        legacy = _make_legacy(tmp_path, content)
+
+        # mkdir runs normally so the nsls2/ directory gets created first,
+        # then shutil.move raises — the old code saw legacy.exists()==True (dir!)
+        # and deleted the temp file (data loss). The staged-flag fix avoids this.
+        with (
+            _patch_home(tmp_path),
+            patch.dict(os.environ, {}, clear=False),
+            patch.object(settings_mod.shutil, "move", side_effect=OSError("EXDEV after mkdir")),
+        ):
+            os.environ.pop("XDG_CONFIG_HOME", None)
+            result = Config.migrate_legacy_config()
+
+        assert result is None
+        # The legacy file must be restored (rollback succeeded) — no data loss.
+        assert legacy.exists(), "Legacy config was lost after shutil.move failure!"
+        assert legacy.is_file(), "Legacy config should be a file after rollback"
+        assert "base_url" in legacy.read_text(), "Legacy config content was lost!"
+        assert "secret" in legacy.read_text(), "Token was lost!"
+        captured = capsys.readouterr()
+        assert "remain at" in captured.err
+        assert "settings are at" not in captured.err
 
 
 # ---------------------------------------------------------------------------
