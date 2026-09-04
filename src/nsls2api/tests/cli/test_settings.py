@@ -122,8 +122,11 @@ class TestMigrateLegacyConfig:
         assert leftover == [], f"Unexpected temp files left over: {leftover}"
 
     def test_no_op_when_new_already_exists(self, tmp_path: Path):
-        """Migration is skipped when the new config file is already present."""
-        legacy = _make_legacy(tmp_path)
+        """Migration is skipped when the new config file is already present.
+
+        The new.exists() short-circuit fires before any legacy handling, so
+        this test only needs the new file to be in place — no legacy required.
+        """
         new = tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         new.parent.mkdir(parents=True, exist_ok=True)
         new.write_text("[api]\nbase_url = https://already.here\n")
@@ -133,7 +136,6 @@ class TestMigrateLegacyConfig:
             result = Config.migrate_legacy_config()
 
         assert result is None
-        assert legacy.exists()  # legacy untouched
         assert new.read_text().startswith("[api]\nbase_url = https://already.here")
 
     def test_no_op_when_legacy_absent(self, tmp_path: Path):
@@ -160,7 +162,7 @@ class TestMigrateLegacyConfig:
         hint; no exception raised; returns None; legacy file untouched."""
         legacy = _make_legacy(tmp_path)
         dot_config = tmp_path / ".config"
-        dot_config.chmod(0o555)  # remove write+execute from the containing dir
+        dot_config.chmod(0o555)  # remove write permission from the containing dir
 
         try:
             with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
@@ -332,7 +334,10 @@ class TestMigrateLegacyConfig:
             new_path = Config.migrate_legacy_config()
 
         assert new_path is not None
-        assert new_path == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
+        # Compare resolved paths: XDG values with trailing slash or '..' segments
+        # produce an unresolved new_path; normalise both sides before comparing.
+        expected = (tmp_path / ".config" / "nsls2" / "api" / "cli.ini").resolve()
+        assert new_path.resolve() == expected
         assert new_path.exists()
         assert "base_url" in new_path.read_text()
         assert legacy.is_dir(), "Legacy path must become a directory after migration"

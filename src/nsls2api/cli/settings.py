@@ -129,28 +129,61 @@ class Config:
             legacy_resolved == parent.resolve() for parent in new.parents
         )
         legacy_removed = False
+        # Record which ancestor directories of new.parent don't yet exist so that,
+        # on failure, we can undo exactly what mkdir created — and no more.  This
+        # list is computed after any legacy.unlink() so the freed 'nsls2' name is
+        # included when it is part of the path that must be created.
+        created_dirs: list[Path] = []
         try:
             if new_under_legacy:
                 legacy.unlink()           # free the 'nsls2' name; tmp holds the copy
                 legacy_removed = True
+            # Collect innermost-first ancestors that mkdir will create.
+            p = new.parent
+            while not p.exists():
+                created_dirs.append(p)
+                p = p.parent
             new.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(tmp), str(new))   # cross-device safe
         except OSError as exc:
             # Recovery: restore legacy from tmp when possible.
-            if legacy_removed and not legacy.exists():
-                # The legacy name is free — move tmp straight back.
-                try:
-                    shutil.move(str(tmp), str(legacy))
-                    print(
-                        f"Warning: nsls2api config migration failed ({exc}). "
-                        f"Your settings remain at '{legacy}'. "
-                        f"To migrate manually:\n"
-                        f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
-                        f"  2. Create the directory '{new.parent}'\n"
-                        f"  3. Move the saved file into place as '{new}'",
-                        file=sys.stderr,
-                    )
-                except OSError:
+            if legacy_removed:
+                # The legacy name was freed; mkdir may have created directory
+                # entries in its place.  Remove only the empty directories we
+                # created (innermost-first, rmdir only — never recursive) so
+                # that the legacy name is available again for restore.
+                for d in created_dirs:
+                    try:
+                        if d.is_dir():
+                            d.rmdir()
+                    except OSError:
+                        break
+                if not legacy.exists():
+                    # The legacy name is free — move tmp straight back.
+                    try:
+                        shutil.move(str(tmp), str(legacy))
+                        print(
+                            f"Warning: nsls2api config migration failed ({exc}). "
+                            f"Your settings remain at '{legacy}'. "
+                            f"To migrate manually:\n"
+                            f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
+                            f"  2. Create the directory '{new.parent}'\n"
+                            f"  3. Move the saved file into place as '{new}'",
+                            file=sys.stderr,
+                        )
+                    except OSError:
+                        print(
+                            f"Warning: nsls2api config migration failed ({exc}) and "
+                            f"could not be recovered. "
+                            f"Your settings are at '{tmp}'. "
+                            f"To recover:\n"
+                            f"  1. Create the directory '{new.parent}'\n"
+                            f"  2. Move '{tmp}' into place as '{new}'",
+                            file=sys.stderr,
+                        )
+                else:
+                    # Created dirs couldn't all be removed; legacy name still
+                    # occupied.  Settings safe in tmp.
                     print(
                         f"Warning: nsls2api config migration failed ({exc}) and "
                         f"could not be recovered. "
