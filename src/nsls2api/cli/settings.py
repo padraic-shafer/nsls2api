@@ -1,5 +1,6 @@
 import configparser
 import os
+import shutil
 import sys
 import tempfile
 from enum import Enum
@@ -93,17 +94,11 @@ class Config:
         try:
             legacy.replace(tmp)                             # free the 'nsls2' name
             new.parent.mkdir(parents=True, exist_ok=True)  # 'nsls2' can now be a dir
-            tmp.replace(new)                                # move into final position
+            shutil.move(str(tmp), str(new))                 # cross-device safe final move
         except OSError as exc:
-            # Best-effort rollback: restore config to its original location.
-            restored = False
-            if tmp.exists() and not legacy.exists():
-                try:
-                    tmp.replace(legacy)
-                    restored = True
-                except OSError:
-                    pass
-            if restored:
+            if legacy.exists():
+                # Staging step failed — legacy is intact; clean up the empty temp file.
+                tmp.unlink(missing_ok=True)
                 print(
                     f"Warning: nsls2api config migration failed ({exc}). "
                     f"Your settings remain at '{legacy}'. "
@@ -113,26 +108,53 @@ class Config:
                     file=sys.stderr,
                 )
             else:
-                # Rollback also failed — settings are at the temp path.
-                print(
-                    f"Warning: nsls2api config migration failed ({exc}) and "
-                    f"could not be rolled back. "
-                    f"Your settings are at '{tmp}'. "
-                    f"To recover:\n"
-                    f"  mkdir -p '{new.parent}' && mv '{tmp}' '{new}'",
-                    file=sys.stderr,
-                )
+                # Staging succeeded but a later step failed. Try to restore legacy.
+                restored = False
+                try:
+                    tmp.replace(legacy)
+                    restored = True
+                except OSError:
+                    pass
+                if restored:
+                    print(
+                        f"Warning: nsls2api config migration failed ({exc}). "
+                        f"Your settings remain at '{legacy}'. "
+                        f"To migrate manually:\n"
+                        f"  mv '{legacy}' '{legacy}.bak' && "
+                        f"mkdir -p '{new.parent}' && mv '{legacy}.bak' '{new}'",
+                        file=sys.stderr,
+                    )
+                else:
+                    # Rollback also failed — settings are at the temp path.
+                    print(
+                        f"Warning: nsls2api config migration failed ({exc}) and "
+                        f"could not be rolled back. "
+                        f"Your settings are at '{tmp}'. "
+                        f"To recover:\n"
+                        f"  mkdir -p '{new.parent}' && mv '{tmp}' '{new}'",
+                        file=sys.stderr,
+                    )
             return None
 
         return new
 
     @classmethod
     def read(cls) -> configparser.ConfigParser:
-        """Read the configuration file, migrating legacy config if present."""
+        """Read the configuration file, migrating legacy config if present.
+
+        If migration was skipped or failed and the new config file does not yet
+        exist, fall back to reading the legacy bare file so existing settings
+        (base_url, token) are not silently dropped.
+        """
         cls.migrate_legacy_config()
         config = configparser.ConfigParser()
-        config_filepath = cls.get_filepath()
-        config.read(config_filepath)
+        new = cls.get_filepath()
+        if new.exists():
+            config.read(new)
+        else:
+            legacy = cls._legacy_filepath()
+            if legacy.is_file():
+                config.read(legacy)  # back-compat: unmigrated settings still honored
         return config
 
     @classmethod
