@@ -49,19 +49,20 @@ class Config:
         """Migrate the legacy bare-file config to the new location, if applicable.
 
         If ``~/.config/nsls2`` exists as a **regular file** (the old format) and
-        the new config file does not yet exist, move the legacy file to the new
-        location, creating intermediate directories as needed.
+        the new config file does not yet exist, copy the content to the new
+        location and remove the legacy file only after the new file is confirmed
+        written.
 
-        Because the legacy file occupies the same name (``nsls2``) that must
-        become a *directory* for the new path, migration stages the legacy file
-        to a temporary sibling location first (via :func:`tempfile.mkstemp`) to
-        free the name before calling ``mkdir``.
+        In the default (no-XDG) case the legacy file occupies the path component
+        ``nsls2`` that must become a *directory* for the new path.  The legacy
+        file is removed just before ``mkdir`` so the name is free; the content is
+        already preserved in a temporary copy made at the start of migration.
 
         Returns the new path if migration occurred, ``None`` otherwise.
 
-        Emits a warning to stderr and returns ``None`` (without raising) if the
-        move fails for any reason (e.g. permissions), so a migration failure
-        never breaks a normal CLI command.
+        Emits a warning to stderr and returns ``None`` (without raising) if
+        migration fails for any reason, so a failure never breaks a normal CLI
+        command.
         """
         legacy = cls._legacy_filepath()
         new = cls.get_filepath()
@@ -74,11 +75,12 @@ class Config:
         if not legacy.is_file():
             return None
 
-        # Check writability before attempting the move.
-        if not os.access(legacy, os.W_OK):
+        # Rename (the staging step) requires write+execute on the containing
+        # directory, not on the file itself.
+        if not os.access(legacy.parent, os.W_OK | os.X_OK):
             print(
                 f"Warning: nsls2api config migration skipped — "
-                f"'{legacy}' is not writable. "
+                f"'{legacy.parent}' is not writable. "
                 f"To migrate manually:\n"
                 f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
                 f"  2. Create the directory '{new.parent}'\n"
@@ -87,20 +89,71 @@ class Config:
             )
             return None
 
-        # Stage the legacy file to a temp sibling so the 'nsls2' name is freed
-        # before we try to create a directory with that same name.
+        # Step 1 — copy legacy content to a temp sibling.  Legacy stays in place
+        # until migration succeeds; a failure here leaves everything unchanged.
         fd, tmp_name = tempfile.mkstemp(dir=legacy.parent, prefix=".nsls2-migrate-")
         os.close(fd)
         tmp = Path(tmp_name)
-        staged = False  # True once legacy.replace(tmp) succeeds and tmp holds the data
         try:
-            legacy.replace(tmp)                             # free the 'nsls2' name
-            staged = True
-            new.parent.mkdir(parents=True, exist_ok=True)  # 'nsls2' can now be a dir
-            shutil.move(str(tmp), str(new))                 # cross-device safe final move
+            shutil.copy2(legacy, tmp)
         except OSError as exc:
-            if not staged:
-                # Staging step failed — legacy is still intact; discard empty temp file.
+            tmp.unlink(missing_ok=True)
+            print(
+                f"Warning: nsls2api config migration failed ({exc}). "
+                f"Your settings remain at '{legacy}'. "
+                f"To migrate manually:\n"
+                f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
+                f"  2. Create the directory '{new.parent}'\n"
+                f"  3. Move the saved file into place as '{new}'",
+                file=sys.stderr,
+            )
+            return None
+
+        # Step 2 — move tmp to the new location, handling the name-collision case.
+        #
+        # When XDG_CONFIG_HOME is not set, new == ~/.config/nsls2/api/cli.ini, so
+        # legacy (~/.config/nsls2, a file) sits exactly where the 'nsls2' directory
+        # component of new.parent must be created.  We must remove the legacy file
+        # before mkdir can succeed; since tmp already holds a full copy, this is safe.
+        #
+        # When XDG_CONFIG_HOME points elsewhere, new lives in a different tree and
+        # there is no collision; legacy is left untouched until after the new file
+        # is successfully written.
+        new_under_legacy = legacy in new.parents
+        legacy_removed = False
+        try:
+            if new_under_legacy:
+                legacy.unlink()           # free the 'nsls2' name; tmp holds the copy
+                legacy_removed = True
+            new.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(tmp), str(new))   # cross-device safe
+        except OSError as exc:
+            # Recovery: restore legacy from tmp when possible.
+            if legacy_removed and not legacy.exists():
+                # The legacy name is free — move tmp straight back.
+                try:
+                    shutil.move(str(tmp), str(legacy))
+                    print(
+                        f"Warning: nsls2api config migration failed ({exc}). "
+                        f"Your settings remain at '{legacy}'. "
+                        f"To migrate manually:\n"
+                        f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
+                        f"  2. Create the directory '{new.parent}'\n"
+                        f"  3. Move the saved file into place as '{new}'",
+                        file=sys.stderr,
+                    )
+                except OSError:
+                    print(
+                        f"Warning: nsls2api config migration failed ({exc}) and "
+                        f"could not be recovered. "
+                        f"Your settings are at '{tmp}'. "
+                        f"To recover:\n"
+                        f"  1. Create the directory '{new.parent}'\n"
+                        f"  2. Move '{tmp}' into place as '{new}'",
+                        file=sys.stderr,
+                    )
+            else:
+                # Legacy was not removed (XDG case, or copy step) — settings intact.
                 tmp.unlink(missing_ok=True)
                 print(
                     f"Warning: nsls2api config migration failed ({exc}). "
@@ -111,48 +164,12 @@ class Config:
                     f"  3. Move the saved file into place as '{new}'",
                     file=sys.stderr,
                 )
-            else:
-                # Staging succeeded (tmp holds the data); a later step failed.
-                # new.parent.mkdir() may have created ~/.config/nsls2/api/ and
-                # ~/.config/nsls2/ (which occupies the legacy name as a directory).
-                # Remove those empty dirs so the legacy name is free to receive the
-                # file again.  rmtree is limited to new.parent (the api/ subtree);
-                # legacy.rmdir() only succeeds when the dir is empty — if it
-                # unexpectedly holds other content it raises and we fall through
-                # to the "settings at tmp" message, never deleting real data.
-                restored = False
-                try:
-                    if new.parent.is_dir():
-                        shutil.rmtree(new.parent, ignore_errors=True)  # …/nsls2/api
-                    if legacy.is_dir():
-                        legacy.rmdir()                                  # empty …/nsls2
-                    tmp.replace(legacy)
-                    restored = True
-                except OSError:
-                    pass
-                if restored:
-                    print(
-                        f"Warning: nsls2api config migration failed ({exc}). "
-                        f"Your settings remain at '{legacy}'. "
-                        f"To migrate manually:\n"
-                        f"  1. Move '{legacy}' aside (e.g. rename it to '{legacy}.bak')\n"
-                        f"  2. Create the directory '{new.parent}'\n"
-                        f"  3. Move the saved file into place as '{new}'",
-                        file=sys.stderr,
-                    )
-                else:
-                    # Rollback also failed — settings are at the temp path.
-                    print(
-                        f"Warning: nsls2api config migration failed ({exc}) and "
-                        f"could not be rolled back. "
-                        f"Your settings are at '{tmp}'. "
-                        f"To recover:\n"
-                        f"  1. Create the directory '{new.parent}'\n"
-                        f"  2. Move '{tmp}' into place as '{new}'",
-                        file=sys.stderr,
-                    )
             return None
 
+        # Step 3 — migration succeeded.
+        # XDG case: legacy was not removed in step 2; delete it now.
+        if not new_under_legacy:
+            legacy.unlink(missing_ok=True)
         return new
 
     @classmethod

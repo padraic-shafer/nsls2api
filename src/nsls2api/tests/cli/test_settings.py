@@ -94,14 +94,15 @@ class TestSetValueRead:
 
 class TestMigrateLegacyConfig:
     def test_migrates_legacy_file(self, tmp_path: Path):
-        """Legacy bare file is moved to the new location; content is preserved.
+        """Legacy bare file is migrated to the new location; content is preserved.
 
-        This is the key self-collision regression test: the legacy file occupies
-        the path component that must become a directory, so staging via a temp
-        file is required.  After migration:
+        In the default (no-XDG) case the legacy file occupies the path component
+        that must become a directory.  Migration copies the content to a temp file
+        first, removes the legacy file to free the name, then moves the temp file
+        to the new path.  After migration:
           - ~/.config/nsls2 must be a DIRECTORY (not a file)
           - ~/.config/nsls2/api/cli.ini must exist with original content
-          - no staging temp files remain in ~/.config/
+          - no temp files remain in ~/.config/
         """
         legacy = _make_legacy(tmp_path)
         dot_config = tmp_path / ".config"
@@ -112,11 +113,11 @@ class TestMigrateLegacyConfig:
         assert new_path is not None
         assert new_path == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         assert new_path.exists()
-        assert legacy.is_dir()                  # bare file replaced by a directory
+        assert legacy.is_dir()          # legacy path is now a directory
         content = new_path.read_text()
         assert "base_url" in content
         assert "127.0.0.1:8080" in content
-        # No staging temp files left behind.
+        # No temp files left behind.
         leftover = list(dot_config.glob(".nsls2-migrate-*"))
         assert leftover == [], f"Unexpected temp files left over: {leftover}"
 
@@ -154,11 +155,12 @@ class TestMigrateLegacyConfig:
         assert result is None
 
     @pytest.mark.skipif(sys.platform == "win32", reason="chmod not meaningful on Windows")
-    def test_warns_and_proceeds_when_not_writable(self, tmp_path: Path, capsys):
-        """Non-writable legacy file: warning is printed with platform-neutral hint;
-        no exception raised; returns None."""
+    def test_warns_and_skips_when_parent_dir_not_writable(self, tmp_path: Path, capsys):
+        """Non-writable parent directory: warning is printed with platform-neutral
+        hint; no exception raised; returns None; legacy file untouched."""
         legacy = _make_legacy(tmp_path)
-        legacy.chmod(0o444)  # read-only
+        dot_config = tmp_path / ".config"
+        dot_config.chmod(0o555)  # remove write+execute from the containing dir
 
         try:
             with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
@@ -166,15 +168,37 @@ class TestMigrateLegacyConfig:
                 new_path = Config.get_filepath()
                 result = Config.migrate_legacy_config()
         finally:
-            legacy.chmod(0o644)  # restore so tmp_path cleanup works
+            dot_config.chmod(0o755)  # restore so tmp_path cleanup works
 
         assert result is None
         captured = capsys.readouterr()
         assert "migration skipped" in captured.err
-        assert str(legacy) in captured.err
+        # Warning identifies the non-writable directory, not the file.
+        assert str(dot_config) in captured.err
         # Hint must use platform-neutral numbered steps, not POSIX shell commands.
         assert "Create the directory" in captured.err
         assert str(new_path.parent) in captured.err
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="chmod not meaningful on Windows")
+    def test_readonly_file_in_writable_dir_migrates(self, tmp_path: Path):
+        """A read-only legacy file in a writable parent directory migrates
+        successfully.  The permission check gates on the parent dir (needed for
+        rename/unlink), not on the file itself."""
+        legacy = _make_legacy(tmp_path)
+        legacy.chmod(0o444)  # file read-only, but parent dir is writable
+
+        try:
+            with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("XDG_CONFIG_HOME", None)
+                new_path = Config.migrate_legacy_config()
+        finally:
+            # If migration succeeded the file is gone; restore only if still there.
+            if legacy.is_file():
+                legacy.chmod(0o644)
+
+        assert new_path is not None
+        assert new_path.exists()
+        assert "base_url" in new_path.read_text()
 
     def test_migration_triggered_by_read(self, tmp_path: Path):
         """Calling read() auto-migrates the legacy file and returns its contents."""
@@ -187,57 +211,49 @@ class TestMigrateLegacyConfig:
 
         assert cfg.get("api", "base_url") == "http://127.0.0.1:8080"
         assert cfg.get("api", "token") == "abc"
-        assert legacy.is_dir()                  # bare file replaced by a directory
+        assert legacy.is_dir()          # legacy path is now a directory
         new = tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
         assert new.exists()
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="chmod not meaningful on Windows")
-    def test_staging_failure_cleans_up_temp_and_reports_legacy(
+    def test_copy_failure_cleans_up_temp_and_reports_legacy(
         self, tmp_path: Path, capsys
     ):
-        """If the initial legacy→tmp staging step raises, migrate_legacy_config():
+        """If the initial copy step raises, migrate_legacy_config():
         - returns None
         - legacy file is still intact
         - no .nsls2-migrate-* temp files are left behind
-        - warning says settings remain at legacy (not at a temp path)
+        - warning says settings remain at legacy
         """
+        import nsls2api.cli.settings as settings_mod
+
         legacy = _make_legacy(tmp_path)
         dot_config = tmp_path / ".config"
-
-        original_replace = Path.replace
-
-        call_count = 0
-
-        def replace_that_fails_on_first_call(self, target):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise OSError("simulated staging failure")
-            return original_replace(self, target)
 
         with (
             _patch_home(tmp_path),
             patch.dict(os.environ, {}, clear=False),
-            patch.object(Path, "replace", replace_that_fails_on_first_call),
+            patch.object(settings_mod.shutil, "copy2", side_effect=OSError("disk full")),
         ):
             os.environ.pop("XDG_CONFIG_HOME", None)
             result = Config.migrate_legacy_config()
 
         assert result is None
-        assert legacy.exists()              # legacy untouched
+        assert legacy.is_file()             # legacy untouched
         assert legacy.read_text().startswith("[api]")
         leftover = list(dot_config.glob(".nsls2-migrate-*"))
         assert leftover == [], f"Temp files leaked: {leftover}"
         captured = capsys.readouterr()
         assert "remain at" in captured.err
-        assert "settings are at" not in captured.err  # must NOT claim settings at temp
+        assert "settings are at" not in captured.err
 
-    def test_shutil_move_failure_triggers_rollback(self, tmp_path: Path, capsys):
-        """If shutil.move raises (e.g. cross-device), the legacy file is restored
-        and the warning says settings remain at legacy."""
+    def test_shutil_move_failure_restores_legacy(self, tmp_path: Path, capsys):
+        """If shutil.move raises after legacy has been unlinked (no-XDG collision
+        case), the legacy file is restored from the temp copy and the warning says
+        settings remain at legacy — no data loss."""
         import nsls2api.cli.settings as settings_mod
 
-        legacy = _make_legacy(tmp_path)
+        content = "[api]\nbase_url = http://127.0.0.1:8080\ntoken = secret\n"
+        legacy = _make_legacy(tmp_path, content)
 
         with (
             _patch_home(tmp_path),
@@ -248,47 +264,46 @@ class TestMigrateLegacyConfig:
             result = Config.migrate_legacy_config()
 
         assert result is None
-        assert legacy.is_file(), "Legacy config must be a file after rollback"
-        assert legacy.read_text().startswith("[api]")
-        captured = capsys.readouterr()
-        assert "remain at" in captured.err
-
-    def test_shutil_move_failure_after_mkdir_does_not_lose_data(
-        self, tmp_path: Path, capsys
-    ):
-        """Regression: when shutil.move fails AFTER mkdir has created the nsls2/
-        directory, the old legacy.exists() check would see the newly-created dir
-        and delete the temp file (the only copy of user settings) — data loss.
-
-        With the staged-flag fix, the code correctly identifies that staging
-        succeeded (tmp holds the data) and attempts rollback regardless of whether
-        legacy.exists() is True or False.
-        """
-        import nsls2api.cli.settings as settings_mod
-
-        content = "[api]\nbase_url = http://127.0.0.1:8080\ntoken = secret\n"
-        legacy = _make_legacy(tmp_path, content)
-
-        # mkdir runs normally so the nsls2/ directory gets created first,
-        # then shutil.move raises — the old code saw legacy.exists()==True (dir!)
-        # and deleted the temp file (data loss). The staged-flag fix avoids this.
-        with (
-            _patch_home(tmp_path),
-            patch.dict(os.environ, {}, clear=False),
-            patch.object(settings_mod.shutil, "move", side_effect=OSError("EXDEV after mkdir")),
-        ):
-            os.environ.pop("XDG_CONFIG_HOME", None)
-            result = Config.migrate_legacy_config()
-
-        assert result is None
-        # The legacy file must be restored (rollback succeeded) — no data loss.
-        assert legacy.exists(), "Legacy config was lost after shutil.move failure!"
-        assert legacy.is_file(), "Legacy config should be a file after rollback"
+        assert legacy.is_file(), "Legacy config must be restored as a file"
         assert "base_url" in legacy.read_text(), "Legacy config content was lost!"
         assert "secret" in legacy.read_text(), "Token was lost!"
         captured = capsys.readouterr()
         assert "remain at" in captured.err
         assert "settings are at" not in captured.err
+
+    def test_xdg_destination_tree_not_deleted_on_move_failure(
+        self, tmp_path: Path, capsys
+    ):
+        """Regression: when XDG_CONFIG_HOME is set, new.parent may be a
+        pre-existing directory unrelated to the legacy path.  A shutil.move
+        failure must NOT delete that directory.  No rmtree of the destination
+        tree is performed."""
+        import nsls2api.cli.settings as settings_mod
+
+        xdg = tmp_path / "xdg"
+        xdg.mkdir()
+        # Pre-create destination tree with a sentinel file.
+        existing_api_dir = xdg / "nsls2" / "api"
+        existing_api_dir.mkdir(parents=True)
+        sentinel = existing_api_dir / "sentinel.txt"
+        sentinel.write_text("do not delete me")
+
+        legacy = _make_legacy(tmp_path)
+
+        with (
+            _patch_home(tmp_path),
+            patch.dict(os.environ, {"XDG_CONFIG_HOME": str(xdg)}, clear=False),
+            patch.object(settings_mod.shutil, "move", side_effect=OSError("EXDEV")),
+        ):
+            result = Config.migrate_legacy_config()
+
+        assert result is None
+        assert sentinel.exists(), "Destination tree was deleted on move failure!"
+        assert sentinel.read_text() == "do not delete me"
+        # Legacy file must still be present (XDG case: legacy not unlinked before move).
+        assert legacy.is_file()
+        captured = capsys.readouterr()
+        assert "remain at" in captured.err
 
 
 # ---------------------------------------------------------------------------
@@ -298,23 +313,21 @@ class TestMigrateLegacyConfig:
 class TestReadLegacyFallback:
     """When migration is skipped/failed, read() must still return legacy values."""
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="chmod not meaningful on Windows")
     def test_read_falls_back_to_legacy_when_migration_skipped(
-        self, tmp_path: Path, capsys
+        self, tmp_path: Path
     ):
-        """Non-writable legacy → migration skipped; read() should still return
+        """When migration is skipped (returns None), read() should still return
         the legacy base_url rather than an empty config."""
-        legacy = _make_legacy(
+        _make_legacy(
             tmp_path, "[api]\nbase_url = http://127.0.0.1:8080\ntoken = mytoken\n"
         )
-        legacy.chmod(0o444)
-
-        try:
-            with _patch_home(tmp_path), patch.dict(os.environ, {}, clear=False):
-                os.environ.pop("XDG_CONFIG_HOME", None)
-                cfg = Config.read()
-        finally:
-            legacy.chmod(0o644)
+        with (
+            _patch_home(tmp_path),
+            patch.dict(os.environ, {}, clear=False),
+            patch.object(Config, "migrate_legacy_config", return_value=None),
+        ):
+            os.environ.pop("XDG_CONFIG_HOME", None)
+            cfg = Config.read()
 
         assert cfg.get("api", "base_url") == "http://127.0.0.1:8080"
         assert cfg.get("api", "token") == "mytoken"
