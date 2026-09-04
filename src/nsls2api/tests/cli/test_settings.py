@@ -305,6 +305,71 @@ class TestMigrateLegacyConfig:
         captured = capsys.readouterr()
         assert "remain at" in captured.err
 
+    @pytest.mark.parametrize("xdg_suffix", [
+        "",           # exact: XDG_CONFIG_HOME=/tmp/.../home/.config
+        "/",          # trailing slash
+        "/../.config" # unnormalized '..' segment resolving to the same dir
+    ])
+    def test_migrates_when_xdg_equals_config_dir(
+        self, tmp_path: Path, xdg_suffix: str
+    ):
+        """When XDG_CONFIG_HOME resolves to ~/.config (via exact match, trailing
+        slash, or '..' segment), migration takes the collision branch and produces
+        the same result as when XDG_CONFIG_HOME is unset:
+          - new config written to ~/.config/nsls2/api/cli.ini
+          - legacy path becomes a directory
+          - no temp files left behind
+        """
+        dot_config = tmp_path / ".config"
+        dot_config.mkdir(parents=True, exist_ok=True)
+        legacy = _make_legacy(tmp_path)
+        xdg_value = str(dot_config) + xdg_suffix
+
+        with (
+            _patch_home(tmp_path),
+            patch.dict(os.environ, {"XDG_CONFIG_HOME": xdg_value}, clear=False),
+        ):
+            new_path = Config.migrate_legacy_config()
+
+        assert new_path is not None
+        assert new_path == tmp_path / ".config" / "nsls2" / "api" / "cli.ini"
+        assert new_path.exists()
+        assert "base_url" in new_path.read_text()
+        assert legacy.is_dir(), "Legacy path must become a directory after migration"
+        leftover = list(dot_config.glob(".nsls2-migrate-*"))
+        assert leftover == [], f"Unexpected temp files left over: {leftover}"
+
+    def test_xdg_equals_config_dir_move_failure_restores_legacy(
+        self, tmp_path: Path, capsys
+    ):
+        """When XDG_CONFIG_HOME=~/.config and shutil.move fails, the legacy file
+        is restored (collision branch recovery), not silently discarded."""
+        import nsls2api.cli.settings as settings_mod
+
+        dot_config = tmp_path / ".config"
+        dot_config.mkdir(parents=True, exist_ok=True)
+        content = "[api]\nbase_url = http://127.0.0.1:8080\ntoken = secret\n"
+        legacy = _make_legacy(tmp_path, content)
+
+        with (
+            _patch_home(tmp_path),
+            patch.dict(
+                os.environ,
+                {"XDG_CONFIG_HOME": str(dot_config)},
+                clear=False,
+            ),
+            patch.object(settings_mod.shutil, "move", side_effect=OSError("EXDEV")),
+        ):
+            result = Config.migrate_legacy_config()
+
+        assert result is None
+        assert legacy.is_file(), "Legacy config must be restored as a file"
+        assert "base_url" in legacy.read_text()
+        assert "secret" in legacy.read_text()
+        captured = capsys.readouterr()
+        assert "remain at" in captured.err
+        assert "settings are at" not in captured.err
+
 
 # ---------------------------------------------------------------------------
 # R4 — read() legacy fallback

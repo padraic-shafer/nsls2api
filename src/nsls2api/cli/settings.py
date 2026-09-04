@@ -111,15 +111,23 @@ class Config:
 
         # Step 2 — move tmp to the new location, handling the name-collision case.
         #
-        # When XDG_CONFIG_HOME is not set, new == ~/.config/nsls2/api/cli.ini, so
-        # legacy (~/.config/nsls2, a file) sits exactly where the 'nsls2' directory
-        # component of new.parent must be created.  We must remove the legacy file
-        # before mkdir can succeed; since tmp already holds a full copy, this is safe.
+        # When new is located under the legacy path (e.g. XDG_CONFIG_HOME unset, or
+        # set to ~/.config), legacy (~/.config/nsls2, a file) sits exactly where the
+        # 'nsls2' directory component of new.parent must be created.  We must remove
+        # the legacy file before mkdir can succeed; since tmp already holds a full
+        # copy, this is safe.
         #
-        # When XDG_CONFIG_HOME points elsewhere, new lives in a different tree and
-        # there is no collision; legacy is left untouched until after the new file
-        # is successfully written.
-        new_under_legacy = legacy in new.parents
+        # When XDG_CONFIG_HOME points to a genuinely different directory, new lives
+        # in a separate tree and there is no collision; legacy is left untouched
+        # until after the new file is successfully written.
+        #
+        # Paths are compared after resolution so that XDG_CONFIG_HOME values that
+        # refer to ~/.config via an alternative spelling (trailing slash, '..' segment,
+        # or a symlink) are still recognised as the collision case.
+        legacy_resolved = legacy.resolve()
+        new_under_legacy = any(
+            legacy_resolved == parent.resolve() for parent in new.parents
+        )
         legacy_removed = False
         try:
             if new_under_legacy:
