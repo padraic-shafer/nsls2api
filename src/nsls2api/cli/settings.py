@@ -32,7 +32,7 @@ class Config:
         %APPDATA% on Windows.
         """
         if sys.platform == "win32":
-            appdata = os.environ.get("APPDATA", "")
+            appdata = os.environ.get("APPDATA", "").strip()
             base = Path(appdata) if appdata else Path.home() / "AppData" / "Roaming"
         else:
             xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()

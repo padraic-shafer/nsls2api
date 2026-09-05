@@ -124,3 +124,15 @@ class TestGetFilepathWindowsSimulated:
         with _patch_home(tmp_path):
             result = Config.get_filepath()
         assert result == tmp_path / "AppData" / "Roaming" / "nsls2" / "api" / "cli.ini"
+
+    def test_windows_blank_appdata_falls_back(self, tmp_path: Path, monkeypatch):
+        """Patch sys.platform to win32; whitespace-only APPDATA → falls back to home.
+
+        Mirrors test_blank_xdg_config_home_falls_back: a blank/whitespace-only
+        env var should be treated as unset on both platforms.
+        """
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setenv("APPDATA", "   ")
+        with _patch_home(tmp_path):
+            result = Config.get_filepath()
+        assert result == tmp_path / "AppData" / "Roaming" / "nsls2" / "api" / "cli.ini"
