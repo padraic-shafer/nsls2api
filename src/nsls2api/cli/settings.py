@@ -50,7 +50,7 @@ class Config:
         config_filepath = cls.get_filepath()
         settings_migration.migrate_legacy_config(config_filepath)
         config = configparser.ConfigParser()
-        if config_filepath.exists():
+        if config_filepath.is_file():
             config.read(config_filepath)
         else:
             settings_migration.read_legacy_fallback(config, config_filepath)
